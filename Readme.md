@@ -16,73 +16,61 @@ Un **orchestrateur** reçoit le challenge, le classe puis le confie à un **agen
 flowchart TB
     CH["Challenge : énoncé, fichiers, host:port"] --> O["Orchestrateur<br/>classification, planification, suivi"]
 
-    O --> W
-    O --> C
-    O --> R
-    O --> P
-    O --> F
-    O --> M
+    O --> W["Agent Web"]
+    O --> C["Agent Crypto"]
+    O --> R["Agent Reverse"]
+    O --> P["Agent Pwn"]
+    O --> F["Agent Forensics / Stégano"]
+    O --> M["Agent Misc"]
 
-    subgraph W["Agent Web"]
-        W1["curl / requests"]
-        W2["sqlmap"]
-        W3["ffuf / gobuster"]
-        W4["jwt_tool"]
-        W5["Navigateur headless"]
-    end
-
-    subgraph C["Agent Crypto"]
-        C1["CyberChef / décodeurs"]
-        C2["SageMath / sympy"]
-        C3["RsaCtfTool"]
-        C4["factordb"]
-        C5["hashcat / john"]
-    end
-
-    subgraph R["Agent Reverse"]
-        R1["file / strings"]
-        R2["Ghidra headless"]
-        R3["radare2"]
-        R4["ltrace / strace"]
-        R5["angr"]
-    end
-
-    subgraph P["Agent Pwn"]
-        P1["checksec"]
-        P2["pwntools"]
-        P3["gdb + pwndbg"]
-        P4["ROPgadget"]
-        P5["one_gadget"]
-    end
-
-    subgraph F["Agent Forensics / Stégano"]
-        F1["tshark / Wireshark"]
-        F2["binwalk / foremost"]
-        F3["exiftool"]
-        F4["zsteg / steghide"]
-        F5["Volatility"]
-    end
-
-    subgraph M["Agent Misc"]
-        M1["Scripting Python"]
-        M2["Client netcat / pwntools"]
-        M3["Décodeurs divers"]
-    end
-
-    W & C & R & P & F & M --> S
-
-    subgraph S["Outils communs"]
-        S1["Shell sandboxé (Docker)"]
-        S2["Exécuteur Python"]
-        S3["Lecture / écriture de fichiers"]
-        S4["Recherche web / write-ups"]
-        S5["Détecteur de flag"]
-        S6["Mémoire / journal des essais"]
-    end
-
-    S5 -->|"Flag trouvé"| V["Validation + write-up"]
-    S5 -->|"Échec"| O
+    W & C & R & P & F & M --> V{"Flag trouvé ?"}
+    V -->|"Oui"| WU["Validation + write-up"]
+    V -->|"Non"| O
 ```
+
+### Outils par agent
+
+- **Agent Web**
+  - curl / requests
+  - sqlmap
+  - ffuf / gobuster
+  - jwt_tool
+  - Navigateur headless
+- **Agent Crypto**
+  - CyberChef / décodeurs
+  - SageMath / sympy
+  - RsaCtfTool
+  - factordb
+  - hashcat / john
+- **Agent Reverse**
+  - file / strings
+  - Ghidra (headless)
+  - radare2
+  - ltrace / strace
+  - angr
+- **Agent Pwn**
+  - checksec
+  - pwntools
+  - gdb + pwndbg
+  - ROPgadget
+  - one_gadget
+- **Agent Forensics / Stégano**
+  - tshark / Wireshark
+  - binwalk / foremost
+  - exiftool
+  - zsteg / steghide
+  - Volatility
+- **Agent Misc**
+  - Scripting Python
+  - Client netcat / pwntools
+  - Décodeurs divers
+- **Outils communs (tous les agents)**
+  - Shell sandboxé (Docker)
+  - Exécuteur Python
+  - Lecture / écriture de fichiers
+  - Recherche web / write-ups
+  - Détecteur de flag
+  - Mémoire / journal des essais
 
 ### Outils à développer nous-mêmes
 
