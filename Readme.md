@@ -8,6 +8,102 @@ CtfAgent vise à concevoir des **agents autonomes basés sur des LLM capables de
 
 L'objectif est d'évaluer jusqu'où un agent peut aller seul sur des challenges de sécurité, et quelles architectures (agent unique, multi-agents, agents spécialisés par catégorie) donnent les meilleurs résultats.
 
+## Architecture des agents
+
+Un **orchestrateur** reçoit le challenge, le classe puis le confie à un **agent spécialisé**. Chaque agent dispose de ses propres outils, en plus d'un socle d'outils communs.
+
+```mermaid
+flowchart TB
+    CH["Challenge : énoncé, fichiers, host:port"] --> O["Orchestrateur<br/>classification, planification, suivi"]
+
+    O --> W
+    O --> C
+    O --> R
+    O --> P
+    O --> F
+    O --> M
+
+    subgraph W["Agent Web"]
+        W1["curl / requests"]
+        W2["sqlmap"]
+        W3["ffuf / gobuster"]
+        W4["jwt_tool"]
+        W5["Navigateur headless"]
+    end
+
+    subgraph C["Agent Crypto"]
+        C1["CyberChef / décodeurs"]
+        C2["SageMath / sympy"]
+        C3["RsaCtfTool"]
+        C4["factordb"]
+        C5["hashcat / john"]
+    end
+
+    subgraph R["Agent Reverse"]
+        R1["file / strings"]
+        R2["Ghidra headless"]
+        R3["radare2"]
+        R4["ltrace / strace"]
+        R5["angr"]
+    end
+
+    subgraph P["Agent Pwn"]
+        P1["checksec"]
+        P2["pwntools"]
+        P3["gdb + pwndbg"]
+        P4["ROPgadget"]
+        P5["one_gadget"]
+    end
+
+    subgraph F["Agent Forensics / Stégano"]
+        F1["tshark / Wireshark"]
+        F2["binwalk / foremost"]
+        F3["exiftool"]
+        F4["zsteg / steghide"]
+        F5["Volatility"]
+    end
+
+    subgraph M["Agent Misc"]
+        M1["Scripting Python"]
+        M2["Client netcat / pwntools"]
+        M3["Décodeurs divers"]
+    end
+
+    W & C & R & P & F & M --> S
+
+    subgraph S["Outils communs"]
+        S1["Shell sandboxé (Docker)"]
+        S2["Exécuteur Python"]
+        S3["Lecture / écriture de fichiers"]
+        S4["Recherche web / write-ups"]
+        S5["Détecteur de flag"]
+        S6["Mémoire / journal des essais"]
+    end
+
+    S5 -->|"Flag trouvé"| V["Validation + write-up"]
+    S5 -->|"Échec"| O
+```
+
+### Outils à développer nous-mêmes
+
+En plus des outils existants, chaque agent aura besoin d'**outils maison** pour que le LLM puisse les utiliser simplement et de façon sûre :
+
+| Outil | Agent(s) | Rôle |
+|---|---|---|
+| `run_in_sandbox` | Tous | Exécuter une commande dans le conteneur isolé, avec timeout et limite de taille de sortie |
+| `find_flag` | Tous | Chercher le format de flag (regex configurable) dans une sortie ou un fichier |
+| `memory` | Tous | Garder une trace des pistes essayées pour éviter de tourner en rond |
+| `classify_challenge` | Orchestrateur | Déduire la catégorie à partir de l'énoncé et des fichiers |
+| `http_session` | Web | Garder les cookies et l'historique des requêtes entre les étapes |
+| `auto_decode` | Crypto, Misc | Essayer automatiquement une chaîne d'encodages (Base64, hex, ROT…) |
+| `rsa_attack` | Crypto | Lancer les attaques RSA classiques selon les paramètres détectés |
+| `decompile` | Reverse, Pwn | Interroger Ghidra en mode headless et renvoyer le pseudo-code d'une fonction |
+| `find_offset` | Pwn | Calculer automatiquement l'offset d'un débordement de tampon |
+| `remote_interact` | Pwn, Misc | Dialoguer avec un service `nc` (envoyer, lire, attendre un motif) |
+| `pcap_summary` | Forensics | Résumer une capture : protocoles, flux, fichiers extractibles |
+| `stego_scan` | Forensics | Lancer en série exiftool, binwalk, zsteg et steghide, puis résumer les résultats |
+| `write_report` | Orchestrateur | Générer le write-up final à partir du journal |
+
 ## Périmètre
 
 Catégories de challenges visées :
