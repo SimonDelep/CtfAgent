@@ -1,0 +1,7 @@
+# L'orchestrateur et son client LLM n'utilisent que la bibliothèque standard
+# (urllib, json, dataclasses) : aucune dépendance n'est requise pour le triage.
+#
+# Dépendances facultatives, utiles aux agents spécialisés à venir :
+# openai>=1.0        # client alternatif au LLMClient maison
+# requests>=2.31     # agent web
+# pwntools>=4.11     # agents pwn / misc
