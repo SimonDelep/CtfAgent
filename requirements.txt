@@ -1,7 +1,8 @@
-# L'orchestrateur et son client LLM n'utilisent que la bibliothèque standard
-# (urllib, json, dataclasses) : aucune dépendance n'est requise pour le triage.
+# CtfAgent n'a AUCUNE dépendance obligatoire.
+# Le client LLM parle à Ollama en local (API compatible OpenAI) via la seule
+# bibliothèque standard (urllib, json, dataclasses, sqlite3). Rien à installer
+# pour faire tourner l'orchestrateur, l'arbre, le rêve et la forge.
 #
-# Dépendances facultatives, utiles aux agents spécialisés à venir :
-# openai>=1.0        # client alternatif au LLMClient maison
+# Dépendances FACULTATIVES, utiles seulement aux agents spécialisés à venir :
 # requests>=2.31     # agent web
 # pwntools>=4.11     # agents pwn / misc

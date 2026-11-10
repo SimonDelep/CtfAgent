@@ -19,6 +19,16 @@ Les poids du modèle ne changent jamais : seule la stratégie (`policy/vN/`)
 """
 from __future__ import annotations
 
+# Permet `python3 runner/rsi_loop.py` autant que `python3 -m runner.rsi_loop` :
+# on garantit que la racine du projet est dans le chemin d'import avant de
+# charger le paquet `core`.
+import sys as _sys
+from pathlib import Path as _Path
+
+_ROOT = _Path(__file__).resolve().parent.parent
+if str(_ROOT) not in _sys.path:
+    _sys.path.insert(0, str(_ROOT))
+
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -95,7 +105,7 @@ class RSIConfig:
     iterations: int = 3
     max_steps: int = 25
     # Garde-fou : tant que False, aucune commande Docker n'est exécutée.
-    enable_sandbox: bool = False
+    enable_sandbox: bool = True
 
 
 # --------------------------------------------------------------------------- #

@@ -38,7 +38,7 @@ def evaluate(
     llm,
     tree: SearchTree,
     workspace_root: str | Path,
-    enable_sandbox: bool = False,
+    enable_sandbox: bool = True,
     max_steps: int = 25,
     forge=None,
 ) -> EvalResult:
