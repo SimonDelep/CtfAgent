@@ -55,6 +55,17 @@ class LLMClient:
     def __init__(self, config: LLMConfig | None = None) -> None:
         self.config = config or LLMConfig.from_env()
 
+    def with_model(self, model: str) -> "LLMClient":
+        """Renvoie un client identique pointant vers un autre modèle servi.
+
+        Sert à la branche weight : évaluer une version de poids = servir un
+        `model_ref` différent (base, ou base+adaptateur fusionné) sur le même
+        backend, sans changer le reste de la configuration.
+        """
+        import dataclasses
+
+        return LLMClient(dataclasses.replace(self.config, model=model))
+
     def chat(
         self,
         messages: list[dict[str, str]],

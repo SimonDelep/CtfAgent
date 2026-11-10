@@ -200,6 +200,45 @@ class Candidate:
 
 
 # --------------------------------------------------------------------------- #
+# Variante « évolution des poids » (branche weight)
+# --------------------------------------------------------------------------- #
+@dataclass
+class WeightVersion:
+    """Une version de poids servie par le backend LLM.
+
+    Contrairement à la branche `dreamer`, c'est CECI qui évolue ici : la
+    stratégie (`policy/v0`) reste figée, et on apprend en mettant à jour les
+    poids (idéalement un adaptateur LoRA réversible, base gelée).
+    """
+
+    version: str            # "v0", "v1", …
+    path: Path
+    base_ref: str           # modèle de base gelé (jamais modifié)
+    model_ref: str          # modèle à SERVIR pour cette version (base, ou base+adapter)
+    adapter_path: str | None = None   # LoRA éventuel
+    meta: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def is_base(self) -> bool:
+        """True si cette version ne modifie pas réellement le modèle de base."""
+        return self.model_ref == self.base_ref and not self.adapter_path
+
+
+@dataclass
+class TrainingExample:
+    """Un exemple d'entraînement issu d'une trajectoire gagnante ou d'un rêve.
+
+    On ne retient que des trajectoires VÉRIFIÉES (rejection sampling) : jamais
+    un flag rêvé, jamais une étape hors du chemin gagnant.
+    """
+
+    prompt: str             # contexte vu par l'agent jusqu'à la décision
+    completion: str         # l'action correcte à cet instant (JSON de l'action)
+    source: str             # "real-solution" | "dream"
+    weight: float = 1.0     # pondération (ex. selon le score du rêve)
+
+
+# --------------------------------------------------------------------------- #
 # Validation ⑩ et rapport final
 # --------------------------------------------------------------------------- #
 @dataclass

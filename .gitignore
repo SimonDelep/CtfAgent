@@ -15,3 +15,6 @@ data/
 
 # Workspaces temporaires des sandbox
 ctfagent_ws_*/
+
+# Versions de poids apprises à l'exécution (branche weight) ; on garde weights/v0
+weights/v[1-9]*/

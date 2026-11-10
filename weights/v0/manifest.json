@@ -1,0 +1,8 @@
+{
+  "version": "v0",
+  "base_ref": "huihui_ai/qwen3.5-abliterated:122b",
+  "model_ref": "huihui_ai/qwen3.5-abliterated:122b",
+  "adapter_path": null,
+  "n_examples": 0,
+  "meta": {"note": "modèle de base gelé ; point de départ de l'évolution des poids"}
+}
