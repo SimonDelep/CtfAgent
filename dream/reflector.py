@@ -13,6 +13,7 @@ from __future__ import annotations
 import re
 
 from core.llm import LLMClient, LLMError
+from core.trace import get_tracer
 from core.types import Candidate, Dream, Policy, PolicyEdit
 
 MAX_EDITS = 3
@@ -42,7 +43,9 @@ class Reflector:
         useful = useful[:MAX_EDITS]
 
         candidate = Candidate(from_version=policy.version, version=_bump_version(policy.version))
+        t = get_tracer()
         if not useful:
+            t.event("reflect", "Aucune leçon exploitable dans les rêves : pas de candidate")
             return candidate
 
         lessons = [self._sanitise(d.lesson) for d in useful]
@@ -61,6 +64,14 @@ class Reflector:
                           + " | ".join(lessons[:MAX_EDITS]),
                 new_content=new_heur,
             ))
+        # What the reflection gives
+        if candidate.edits:
+            for edit in candidate.edits:
+                t.event("reflect", f"{policy.version} → {candidate.version} : édition de "
+                                   f"'{edit.target}'", rationale=edit.rationale,
+                        new_content=edit.new_content)
+        else:
+            t.event("reflect", "Les leçons ne changent pas les heuristiques : pas d'édition")
         return candidate
 
     # -- anti-fuite ------------------------------------------------------- #

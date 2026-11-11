@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import Callable
 
+from core.trace import get_tracer
 from core.tree import SearchTree
 from core.types import Dream, Node
 
@@ -67,9 +68,20 @@ class Dreamer:
         nœud atteint — l'interface est prête (voir `dream.simulator`).
         """
         dreams: list[Dream] = []
-        for fork in self.tree.bad_forks(attempt_id):
+        # Dreams are written into the challenge's own log file
+        t = get_tracer()
+        t.start_challenge(challenge_name, attempt=attempt_id)
+        forks = self.tree.bad_forks(attempt_id)
+        t.event("dream", f"{len(forks)} mauvaise(s) bifurcation(s) à rejouer")
+        for fork in forks:
             reached = _deepest(self.tree, fork)
             rejoined, steps, score, lesson = self.judge(self.tree, fork, reached)
+            # What it dreams and what it gives
+            what = f"{fork.action.tool} {fork.action.args}" if fork.action else "?"
+            verdict = (f"rejoint le chemin gagnant en {steps} étape(s)" if rejoined
+                       else "impasse")
+            t.event("dream", f"Bifurcation n°{fork.id} : {what} → {verdict} (score {score:.2f})",
+                    hypothesis=fork.hypothesis, reached_node=reached.id, lesson=lesson)
             dreams.append(Dream(
                 branch_node_id=fork.id,
                 challenge_name=challenge_name,
@@ -78,6 +90,7 @@ class Dreamer:
                 score=score,
                 lesson=lesson,
             ))
+        t.end_challenge()
         return dreams
 
 

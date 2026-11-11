@@ -16,6 +16,7 @@ import uuid
 
 from core.llm import LLMClient, LLMError
 from core.tools import get_tool, tools_prompt
+from core.trace import get_tracer
 from core.tree import SearchTree
 from core.types import Action, Attempt, Challenge, Observation, Policy, World
 
@@ -41,6 +42,14 @@ class Agent:
         root_id = self.tree.start_attempt(attempt)
         world.reset()
 
+        # Announce the challenge (everything after goes into its own log file)
+        t = get_tracer()
+        t.start_challenge(challenge.name, attempt=attempt.id, policy=policy.version,
+                          category=challenge.declared_category, files=challenge.files,
+                          service=f"{challenge.host}:{challenge.port}" if challenge.has_service else None)
+        # Actions already tried, to detect when the model goes round in circles
+        seen: set[str] = set()
+
         messages = [
             {"role": "system", "content": policy.system_prompt(tools_prompt())},
             {"role": "user", "content": _challenge_brief(challenge)},
@@ -52,12 +61,20 @@ class Agent:
         for step in range(1, self.max_steps + 1):
             action = self._decide(messages)
             if action is None:
+                t.event("block", f"Aucune action exploitable à l'étape {step} : arrêt")
                 break
+
+            # What the model tries to do
+            t.event("action", f"#{step} {action.tool} {json.dumps(action.args, ensure_ascii=False)}")
+            if action.key() in seen:
+                t.event("block", "Action déjà tentée : le modèle tourne en rond")
+            seen.add(action.key())
 
             # Tools « méta » traités par la boucle elle-même.
             if action.tool == "set_hypothesis":
                 hypothesis = action.args.get("text", "") or action.hypothesis
                 obs = Observation(output=f"[hypothèse: {hypothesis}]")
+                _trace_obs(obs)
                 node_id = self.tree.add_node(attempt.id, current_parent, action, obs,
                                              hypothesis=hypothesis)
                 current_parent = node_id  # nouvelle branche
@@ -67,6 +84,7 @@ class Agent:
 
             if action.tool == "create_tool":
                 obs = self._handle_create_tool(action)
+                _trace_obs(obs)
                 node_id = self.tree.add_node(attempt.id, current_parent, action, obs,
                                              hypothesis=hypothesis)
                 current_parent = node_id
@@ -84,7 +102,10 @@ class Agent:
                     attempt.flag = flag
                     attempt.steps = step
                     self.tree.mark_solution_path(attempt.id, node_id, flag, step)
+                    t.event("flag", f"✔ Flag soumis : {flag} ({step} étapes)")
+                    t.end_challenge()
                     return attempt
+                t.event("block", f"Flag rejeté (mauvais format) : {flag}")
                 messages.append({"role": "assistant", "content": _fmt_action(action)})
                 messages.append({"role": "user",
                                  "content": "Flag au mauvais format, continue."})
@@ -95,7 +116,14 @@ class Agent:
             if get_tool(action.tool) is None:
                 obs = Observation(output=f"[tool inconnu: {action.tool}]")
             else:
-                obs = world.step(action)
+                # A crash of the world (Docker, sandbox…) must still appear in the logs
+                try:
+                    obs = world.step(action)
+                except Exception as exc:
+                    t.event("block", f"Exception pendant l'action : {exc!r}")
+                    t.end_challenge()
+                    raise
+            _trace_obs(obs)
 
             node_id = self.tree.add_node(attempt.id, current_parent, action, obs,
                                          hypothesis=hypothesis)
@@ -109,11 +137,17 @@ class Agent:
                 attempt.solved = True
                 attempt.flag = flag
                 self.tree.mark_solution_path(attempt.id, node_id, flag, step)
+                t.event("flag", f"✔ Flag trouvé dans la sortie : {flag} ({step} étapes)")
+                t.end_challenge()
                 return attempt
 
             messages.append({"role": "assistant", "content": _fmt_action(action)})
             messages.append({"role": "user", "content": _observation_text(obs)})
 
+        # Out of steps (or model stopped answering)
+        t.event("block", f"✘ Échec : pas de flag après {attempt.steps} étape(s) "
+                         f"(max={self.max_steps})")
+        t.end_challenge()
         return attempt
 
     # -- forge (option 2) ------------------------------------------------- #
@@ -137,11 +171,56 @@ class Agent:
     def _decide(self, messages: list[dict[str, str]]) -> Action | None:
         if self.llm is None:
             return None  # pas de modèle → l'agent ne peut pas décider
+        t = get_tracer()
+        # Bigger budget: the thinking phase consumes tokens before the JSON answer
         try:
-            raw = self.llm.chat(messages, max_tokens=512)
-        except LLMError:
+            raw, reasoning = self.llm.chat_full(messages, max_tokens=4096)
+        except LLMError as exc:
+            t.event("block", f"Erreur LLM : {exc}")
             return None
-        return _parse_action(raw)
+        # What the model thinks
+        if reasoning:
+            t.event("think", reasoning)
+        action = _parse_action(raw)
+        if action is None:
+            t.event("block", "Réponse sans JSON d'action exploitable", raw=raw)
+            return None
+        # Text written around the JSON is also part of its reasoning
+        prose = _strip_json(raw)
+        if prose:
+            t.event("think", prose)
+        if action.hypothesis:
+            t.event("think", f"Hypothèse : {action.hypothesis}")
+        return action
+
+
+def _trace_obs(obs: Observation) -> None:
+    """Affiche le résultat d'une action et signale les blocages.
+    Shows an action result and flags blocking situations.
+    """
+    t = get_tracer()
+    out = obs.output or ""
+    t.event("result", out or "(sortie vide)", exit_code=obs.exit_code,
+            truncated=obs.truncated, simulated=obs.simulated)
+    # Known failure signals coming from the sandbox / simulator / forge
+    failed = (
+        obs.unsimulated
+        or (obs.exit_code not in (None, 0))
+        or out.startswith(("[tool inconnu", "[create_tool", "[timeout", "[accès refusé",
+                           "[fichier introuvable", "[lecture impossible", "[remote non"))
+    )
+    if failed:
+        t.event("block", f"Échec de l'action (exit={obs.exit_code}) : {out[:200]}")
+
+
+def _strip_json(raw: str) -> str:
+    """Retire le bloc JSON d'action et renvoie le texte libre restant."""
+    text = re.sub(r"```(?:json)?\s*\{.*?\}\s*```", "", raw, flags=re.DOTALL)
+    obj_start = text.find("{")
+    obj_end = text.rfind("}")
+    if obj_start != -1 and obj_end > obj_start:
+        text = text[:obj_start] + text[obj_end + 1:]
+    return text.strip()
 
 
 def _parse_action(raw: str) -> Action | None:

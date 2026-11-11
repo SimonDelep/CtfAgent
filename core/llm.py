@@ -65,6 +65,21 @@ class LLMClient:
         extra: dict[str, Any] | None = None,
     ) -> str:
         """Envoie une conversation et renvoie le texte de la réponse."""
+        return self.chat_full(messages, temperature=temperature, max_tokens=max_tokens,
+                              stop=stop, extra=extra)[0]
+
+    def chat_full(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        temperature: float | None = None,
+        max_tokens: int = 1024,
+        stop: list[str] | None = None,
+        extra: dict[str, Any] | None = None,
+    ) -> tuple[str, str]:
+        """Comme `chat`, mais renvoie (réponse, raisonnement).
+        Same as `chat`, but returns (answer, reasoning / thinking phase).
+        """
         payload: dict[str, Any] = {
             "model": self.config.model,
             "messages": messages,
@@ -96,9 +111,18 @@ class LLMClient:
             raise LLMError(f"Réponse LLM illisible : {exc}") from exc
 
         try:
-            return data["choices"][0]["message"]["content"]
+            msg = data["choices"][0]["message"]
         except (KeyError, IndexError, TypeError) as exc:
             raise LLMError(f"Réponse LLM sans contenu : {data!r}") from exc
+        content = msg.get("content") or ""
+        # Thinking location depends on the server: Ollama -> "reasoning", vLLM -> "reasoning_content"
+        reasoning = msg.get("reasoning") or msg.get("reasoning_content") or ""
+        # Otherwise the model may write it inline between <think> tags
+        think = re.search(r"<think>(.*?)</think>", content, re.DOTALL)
+        if think:
+            reasoning = reasoning or think.group(1).strip()
+            content = content.replace(think.group(0), "").strip()
+        return content, reasoning
 
     def complete_json(
         self,

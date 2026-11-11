@@ -13,6 +13,7 @@ from pathlib import Path
 from core.agent import Agent
 from core.loader import load_challenge
 from core.sandbox import Sandbox
+from core.trace import get_tracer
 from core.tree import SearchTree
 from core.types import EvalResult, Policy
 
@@ -68,9 +69,14 @@ def evaluate(
         if attempt.solved and expected is None:
             ok = True
         per[challenge.name] = ok
+        # Compare with the real flag (the agent never sees it)
+        get_tracer().event("info", f"{challenge.name} : {'✔ OK' if ok else '✘ raté'} "
+                                   f"({attempt.steps or max_steps} étapes)", found=attempt.flag)
         solved += int(ok)
         total_steps += attempt.steps or max_steps
 
+    get_tracer().event("info", f"Score {policy.version} : {solved}/{len(challenge_dirs)} "
+                               f"flags, {total_steps} étapes")
     return EvalResult(
         policy_version=policy.version,
         total=len(challenge_dirs),

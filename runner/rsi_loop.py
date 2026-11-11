@@ -39,6 +39,7 @@ from core.llm import LLMClient
 from core.loader import load_challenge
 from core.sandbox import Sandbox
 from core.tools import unregister_generated
+from core.trace import Tracer, get_tracer, set_tracer
 from core.tree import SearchTree
 from core.types import Candidate, Policy, RSIReport
 from dream.dreamer import Dreamer
@@ -137,6 +138,8 @@ class RSIOrchestrator:
 
     def real_phase(self, policy: Policy) -> None:
         """L'agent attaque les challenges d'entraînement ; arbres enregistrés."""
+        get_tracer().set_phase("RÉEL", f"stratégie {policy.version}, "
+                                       f"{len(self.cfg.train)} challenge(s)")
         self._activate_policy_tools(policy)
         for cdir in self.cfg.train:
             ws = self.cfg.workspace_root / cdir.name
@@ -148,6 +151,7 @@ class RSIOrchestrator:
     # -- 2+3. rêve + réflexion ------------------------------------------- #
     def dream_and_reflect(self, policy: Policy) -> Candidate:
         """Rejoue les mauvaises bifurcations et propose une candidate v(n+1)."""
+        get_tracer().set_phase("RÊVE", f"depuis {policy.version}")
         dreams = []
         for attempt in self.tree.solved_attempts():
             dreams.extend(self.dreamer.dream_attempt(attempt.id, attempt.challenge_name))
@@ -161,6 +165,9 @@ class RSIOrchestrator:
         cand_eval = self._evaluate(candidate_policy, self.cfg.val, scope="val-candidate")
         verdict = gate_mod.decide(base_eval, cand_eval)
         self.report.gate_history.append(verdict)
+        # Gate verdict goes to the global log
+        get_tracer().set_phase("PORTE", f"{baseline.version} vs {candidate_policy.version}")
+        get_tracer().event("gate", verdict.reason)
         return verdict
 
     # -- boucle complète -------------------------------------------------- #
@@ -176,6 +183,7 @@ class RSIOrchestrator:
 
         for _ in range(self.cfg.iterations):
             self.report.iterations += 1
+            get_tracer().set_phase(f"ITÉRATION {self.report.iterations}/{self.cfg.iterations}")
             candidate = self.dream_and_reflect(policy)
             # Option 2 : promouvoir les outils forgés utiles dans la candidate.
             # Ils seront ensuite validés par la porte ⑩ comme le reste.
@@ -205,6 +213,8 @@ class RSIOrchestrator:
     # -- utilitaires ------------------------------------------------------ #
     def _evaluate(self, policy: Policy, dirs: list[Path], *, scope: str):
         ws = self.cfg.workspace_root / scope
+        get_tracer().set_phase(scope.upper(), f"stratégie {policy.version}, "
+                                              f"{len(dirs)} challenge(s)")
         # Active les outils forgés propres à CETTE stratégie avant de l'évaluer.
         self._activate_policy_tools(policy)
         return evaluate_mod.evaluate(
@@ -245,6 +255,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--enable-sandbox", action="store_true",
                         help="autorise l'exécution Docker réelle (sinon à sec)")
     parser.add_argument("--no-llm", action="store_true")
+    parser.add_argument("--quiet", action="store_true",
+                        help="pas d'affichage console (les journaux sont tout de même écrits)")
+    parser.add_argument("--log-root", default=str(root / "data" / "logs"),
+                        help="dossier racine des journaux par challenge")
     parser.add_argument("--dry-run", action="store_true",
                         help="affiche la configuration et la liste des challenges, puis quitte")
     args = parser.parse_args(argv)
@@ -264,6 +278,12 @@ def main(argv: list[str] | None = None) -> int:
         if n == 0:
             print("Aucun challenge : initialise le sous-module CSAW26_LLMAC_DB.")
         return 0
+
+    # One log folder per run: data/logs/<date-time>/<challenge>.log|.jsonl
+    import time
+    log_dir = Path(args.log_root) / time.strftime("%Y%m%d-%H%M%S")
+    set_tracer(Tracer(log_dir=log_dir, console=not args.quiet))
+    print(f"Journaux : {log_dir}")
 
     llm = None if args.no_llm else LLMClient()
     cfg = RSIConfig(
