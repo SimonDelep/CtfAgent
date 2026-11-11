@@ -8,7 +8,7 @@ from pathlib import Path
 
 _COL = {"think": "2;36", "action": "1;34", "result": "37", "block": "1;31",
         "flag": "1;32", "dream": "35", "reflect": "33", "gate": "1;33",
-        "challenge": "1;37", "phase": "1;35", "info": "37"}
+        "challenge": "1;37", "branch": "1;36", "phase": "1;35", "info": "37"}
 
 class Tracer:
 

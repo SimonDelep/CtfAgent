@@ -156,6 +156,24 @@ class SearchTree:
         for r in rows:
             yield _row_to_attempt(r)
 
+    def failed_attempts(self, policy_version: str | None = None) -> list[Attempt]:
+        """Tentatives non résolues (option : d'une seule version de stratégie).
+        Unsolved attempts, optionally restricted to one policy version.
+        """
+        if policy_version is None:
+            rows = self.conn.execute(
+                "SELECT * FROM attempts WHERE solved=0 ORDER BY ts").fetchall()
+        else:
+            rows = self.conn.execute(
+                "SELECT * FROM attempts WHERE solved=0 AND policy=? ORDER BY ts",
+                (policy_version,)
+            ).fetchall()
+        return [_row_to_attempt(r) for r in rows]
+
+    def get_attempt(self, attempt_id: str) -> Attempt | None:
+        row = self.conn.execute("SELECT * FROM attempts WHERE id=?", (attempt_id,)).fetchone()
+        return _row_to_attempt(row) if row else None
+
     def bad_forks(self, attempt_id: str) -> list[Node]:
         """Nœuds hors du chemin gagnant dont le parent, lui, est sur le chemin.
 

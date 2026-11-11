@@ -36,14 +36,15 @@ from pathlib import Path
 from core.agent import Agent
 from core.forge import ToolForge
 from core.llm import LLMClient
-from core.loader import load_challenge
+from core.loader import load_challenge, load_solution_text
 from core.sandbox import Sandbox
 from core.tools import unregister_generated
 from core.trace import Tracer, get_tracer, set_tracer
 from core.tree import SearchTree
-from core.types import Candidate, Policy, RSIReport
+from core.types import Candidate, Challenge, Dream, Policy, RSIReport
 from dream.dreamer import Dreamer
-from dream.reflector import Reflector
+from dream.reflector import FailureCase, Reflector
+from dream.traces import attempt_trace
 from runner import evaluate as evaluate_mod
 from runner import gate as gate_mod
 
@@ -107,6 +108,13 @@ class RSIConfig:
     max_steps: int = 25
     # Garde-fou : tant que False, aucune commande Docker n'est exécutée.
     enable_sandbox: bool = True
+    # Sources d'apprentissage (désactivables pour comparer : ablation)
+    learn_failures: bool = True    # réflexion sur les challenges ratés
+    hindsight: bool = True         # + comparaison aux solutions (train seulement)
+    dream: bool = True             # juger les branches abandonnées
+    real_dreams: bool = True       # relancer le LLM dans le simulateur
+    dream_starts: int = 3          # nombre de rêves par tentative résolue
+    dream_steps: int = 6           # étapes max par rêve
 
 
 # --------------------------------------------------------------------------- #
@@ -122,7 +130,18 @@ class RSIOrchestrator:
         # Forgeron d'outils (option 2), partagé par l'agent et la sandbox.
         self.forge = ToolForge(config.workspace_root / "forge" / "live")
         self.agent = Agent(llm, self.tree, max_steps=config.max_steps, forge=self.forge)
-        self.dreamer = Dreamer(self.tree)
+        self.dreamer = Dreamer(
+            self.tree, llm=llm,
+            agent=self.agent if config.real_dreams else None,
+            n_starts=config.dream_starts, max_steps=config.dream_steps,
+        )
+        # TRAIN challenges seen in the real phase: name -> (folder, Challenge).
+        # Only these may be dreamed of or reflected upon (never val/test).
+        self.train_challenges: dict[str, tuple[Path, Challenge]] = {}
+        # Results already computed for an attempt (avoids paying the LLM twice
+        # when an iteration is rejected and the same attempts come back)
+        self._dream_cache: dict[str, list[Dream]] = {}
+        self._failure_cache: dict[str, list[str]] = {}
         # Noms de challenges (train+val+test) à bannir des stratégies.
         names = [p.name for p in (config.train + config.val + config.test)]
         self.reflector = Reflector(llm, challenge_names=names)
@@ -144,19 +163,67 @@ class RSIOrchestrator:
         for cdir in self.cfg.train:
             ws = self.cfg.workspace_root / cdir.name
             challenge = load_challenge(cdir, workspace=ws)
+            self.train_challenges[challenge.name] = (cdir, challenge)
             sandbox = Sandbox(ws, enabled=self.cfg.enable_sandbox,
                               timeout=self.cfg.max_steps * 2, forge=self.forge)
             self.agent.run(challenge, policy, sandbox)
 
     # -- 2+3. rêve + réflexion ------------------------------------------- #
     def dream_and_reflect(self, policy: Policy) -> Candidate:
-        """Rejoue les mauvaises bifurcations et propose une candidate v(n+1)."""
-        get_tracer().set_phase("RÊVE", f"depuis {policy.version}")
-        dreams = []
-        for attempt in self.tree.solved_attempts():
-            dreams.extend(self.dreamer.dream_attempt(attempt.id, attempt.challenge_name))
-        self.report.notes.append(f"{len(dreams)} rêve(s) générés depuis {policy.version}.")
-        return self.reflector.reflect(policy, dreams)
+        """Tire les leçons des échecs et des rêves, et propose une candidate v(n+1).
+
+        Seules les tentatives sur l'ENTRAÎNEMENT sont utilisées : les tentatives
+        de validation/test restent dans l'arbre mais n'apprennent rien à la
+        stratégie (sinon la porte ⑩ serait biaisée).
+        """
+        t = get_tracer()
+
+        # 1. Failures of the current policy (aim: more flags)
+        failure_lessons: list[str] = []
+        if self.cfg.learn_failures:
+            t.set_phase("RÉFLEXION", f"échecs de {policy.version}")
+            failure_lessons = self._learn_from_failures(policy)
+
+        # 2. Dreams on solved attempts (aim: fewer steps)
+        dreams: list[Dream] = []
+        if self.cfg.dream:
+            t.set_phase("RÊVE", f"depuis {policy.version}")
+            for attempt in self.tree.solved_attempts():
+                if attempt.challenge_name not in self.train_challenges:
+                    continue  # val/test or an old run: never dream of it
+                if attempt.id not in self._dream_cache:
+                    _, challenge = self.train_challenges[attempt.challenge_name]
+                    self._dream_cache[attempt.id] = self.dreamer.dream_attempt(
+                        attempt.id, attempt.challenge_name,
+                        challenge=challenge, policy=policy)
+                dreams.extend(self._dream_cache[attempt.id])
+
+        self.report.notes.append(
+            f"{len(failure_lessons)} leçon(s) d'échecs et {len(dreams)} rêve(s) "
+            f"depuis {policy.version}.")
+        t.set_phase("RÉFLEXION", f"{policy.version} → candidate")
+        return self.reflector.reflect(policy, dreams, failure_lessons)
+
+    def _learn_from_failures(self, policy: Policy) -> list[str]:
+        """Analyse chaque challenge d'entraînement raté par `policy`."""
+        t = get_tracer()
+        # Last failed attempt per train challenge
+        latest = {a.challenge_name: a for a in self.tree.failed_attempts(policy.version)
+                  if a.challenge_name in self.train_challenges}
+        t.event("reflect", f"{len(latest)} challenge(s) d'entraînement raté(s) à analyser")
+        lessons: list[str] = []
+        for name, attempt in latest.items():
+            if attempt.id not in self._failure_cache:
+                cdir, challenge = self.train_challenges[name]
+                # Official solution: TRAIN only, never shown to the agent
+                writeup = (load_solution_text(cdir, flag_regex=challenge.flag_regex)
+                           if self.cfg.hindsight else "")
+                t.start_challenge(name, attempt=attempt.id, writeup=bool(writeup))
+                self._failure_cache[attempt.id] = self.reflector.learn_from_failure(
+                    FailureCase(name, attempt_trace(self.tree, attempt.id), writeup))
+                t.end_challenge()
+            lessons.extend(self._failure_cache[attempt.id])
+        return lessons
 
     # -- 4. validation ---------------------------------------------------- #
     def validate(self, baseline: Policy, candidate_policy: Policy):
@@ -259,6 +326,18 @@ def main(argv: list[str] | None = None) -> int:
                         help="pas d'affichage console (les journaux sont tout de même écrits)")
     parser.add_argument("--log-root", default=str(root / "data" / "logs"),
                         help="dossier racine des journaux par challenge")
+    # Ablation: switch off one learning source to measure what it brings
+    parser.add_argument("--no-failures", action="store_true",
+                        help="ne pas apprendre des challenges ratés")
+    parser.add_argument("--no-hindsight", action="store_true",
+                        help="ne pas comparer aux solutions officielles (train)")
+    parser.add_argument("--no-dream", action="store_true", help="aucun rêve")
+    parser.add_argument("--no-real-dreams", action="store_true",
+                        help="juger les branches abandonnées sans relancer le LLM")
+    parser.add_argument("--dream-starts", type=int, default=3,
+                        help="nombre de rêves par tentative résolue")
+    parser.add_argument("--dream-steps", type=int, default=6,
+                        help="étapes max par rêve")
     parser.add_argument("--dry-run", action="store_true",
                         help="affiche la configuration et la liste des challenges, puis quitte")
     args = parser.parse_args(argv)
@@ -293,6 +372,12 @@ def main(argv: list[str] | None = None) -> int:
         train=train, val=val, test=test,
         iterations=args.iterations,
         enable_sandbox=args.enable_sandbox,
+        learn_failures=not args.no_failures,
+        hindsight=not args.no_hindsight,
+        dream=not args.no_dream,
+        real_dreams=not args.no_real_dreams,
+        dream_starts=args.dream_starts,
+        dream_steps=args.dream_steps,
     )
     orch = RSIOrchestrator(cfg, llm)
     report = orch.run(args.start)

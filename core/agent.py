@@ -18,7 +18,7 @@ from core.llm import LLMClient, LLMError
 from core.tools import get_tool, tools_prompt
 from core.trace import get_tracer
 from core.tree import SearchTree
-from core.types import Action, Attempt, Challenge, Observation, Policy, World
+from core.types import Action, Attempt, Challenge, Node, Observation, Policy, World
 
 
 class Agent:
@@ -57,6 +57,9 @@ class Agent:
 
         current_parent = root_id
         hypothesis: str | None = None
+        # Node under which hypotheses are opened: every new hypothesis becomes a
+        # SIBLING of the previous one, so abandoned ideas stay as dead branches
+        hyp_anchor: int | None = None
 
         for step in range(1, self.max_steps + 1):
             action = self._decide(messages)
@@ -75,7 +78,14 @@ class Agent:
                 hypothesis = action.args.get("text", "") or action.hypothesis
                 obs = Observation(output=f"[hypothèse: {hypothesis}]")
                 _trace_obs(obs)
-                node_id = self.tree.add_node(attempt.id, current_parent, action, obs,
+                # First hypothesis: anchor on the current state (end of recon).
+                # Next ones: restart from that anchor -> real fork in the tree.
+                if hyp_anchor is None:
+                    hyp_anchor = current_parent
+                else:
+                    t.event("branch", f"Nouvelle branche depuis le nœud {hyp_anchor} "
+                                      f"(abandon de la piste précédente)")
+                node_id = self.tree.add_node(attempt.id, hyp_anchor, action, obs,
                                              hypothesis=hypothesis)
                 current_parent = node_id  # nouvelle branche
                 messages.append({"role": "assistant", "content": _fmt_action(action)})
@@ -150,6 +160,69 @@ class Agent:
         t.end_challenge()
         return attempt
 
+    # -- rêve ------------------------------------------------------------ #
+    def dream(self, challenge: Challenge, policy: Policy, world: World,
+              prefix: list[Node], *, max_steps: int = 6,
+              temperature: float = 0.8) -> list[tuple[Action, Observation]]:
+        """Relance le modèle depuis un état passé, dans un monde simulé.
+
+        `prefix` est le chemin racine → nœud de départ : il est rejoué comme
+        historique de conversation. Rien n'est écrit dans l'arbre : le rêve
+        est renvoyé sous forme de transcript (action, observation).
+        Restarts the model from a past state in a simulated world, without
+        writing anything into the real tree.
+        """
+        t = get_tracer()
+        world.reset()
+        messages = [
+            {"role": "system", "content": policy.system_prompt(tools_prompt())},
+            {"role": "user", "content": _challenge_brief(challenge)},
+        ]
+        # Replay the past as if the model had lived it
+        for node in prefix:
+            if node.action is None:
+                continue
+            messages.append({"role": "assistant", "content": _fmt_action(node.action)})
+            messages.append({"role": "user", "content": _observation_text(node.observation)
+                             if node.observation else ""})
+
+        transcript: list[tuple[Action, Observation]] = []
+        misses = 0  # consecutive [NON SIMULÉ]: the dream leaves known territory
+        for step in range(1, max_steps + 1):
+            action = self._decide(messages, temperature=temperature)
+            if action is None:
+                break
+            t.event("action", f"(rêve) #{step} {action.tool} "
+                              f"{json.dumps(action.args, ensure_ascii=False)}")
+
+            if action.tool == "set_hypothesis":
+                obs = Observation(output=f"[hypothèse: {action.args.get('text', '')}]",
+                                  simulated=True)
+            elif action.tool == "submit_flag":
+                # A dreamed flag never counts: the dream simply ends here
+                obs = Observation(output="[flag rêvé : non vérifiable]", simulated=True)
+                transcript.append((action, obs))
+                _trace_obs(obs)
+                break
+            elif action.tool == "create_tool":
+                obs = Observation(output="[create_tool indisponible en rêve]",
+                                  simulated=True, unsimulated=True)
+            else:
+                obs = world.step(action)
+            _trace_obs(obs)
+            transcript.append((action, obs))
+
+            # Stop when the flag is reached or after 2 actions the world cannot answer
+            if re.search(challenge.flag_regex, obs.output or ""):
+                break
+            misses = misses + 1 if obs.unsimulated else 0
+            if misses >= 2:
+                t.event("block", "Le rêve sort de ce que le simulateur connaît : arrêt")
+                break
+            messages.append({"role": "assistant", "content": _fmt_action(action)})
+            messages.append({"role": "user", "content": _observation_text(obs)})
+        return transcript
+
     # -- forge (option 2) ------------------------------------------------- #
     def _handle_create_tool(self, action: Action) -> Observation:
         if self.forge is None:
@@ -168,13 +241,15 @@ class Agent:
         return Observation(output=f"[create_tool refusé : {res.message}]")
 
     # -- décision LLM ----------------------------------------------------- #
-    def _decide(self, messages: list[dict[str, str]]) -> Action | None:
+    def _decide(self, messages: list[dict[str, str]], *,
+                temperature: float | None = None) -> Action | None:
         if self.llm is None:
             return None  # pas de modèle → l'agent ne peut pas décider
         t = get_tracer()
         # Bigger budget: the thinking phase consumes tokens before the JSON answer
         try:
-            raw, reasoning = self.llm.chat_full(messages, max_tokens=4096)
+            raw, reasoning = self.llm.chat_full(messages, max_tokens=4096,
+                                                temperature=temperature)
         except LLMError as exc:
             t.event("block", f"Erreur LLM : {exc}")
             return None

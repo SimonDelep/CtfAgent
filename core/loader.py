@@ -109,6 +109,36 @@ def load_challenge(
     )
 
 
+def load_solution_text(challenge_dir: str | Path, *, max_chars: int = 6000,
+                       flag_regex: str = DEFAULT_FLAG_REGEX) -> str:
+    """Lit le write-up / script de solution d'un challenge.
+
+    ⚠️ RÉSERVÉ AU RÉFLECTEUR, sur l'ensemble d'ENTRAÎNEMENT uniquement : ce texte
+    n'est jamais donné à l'agent et ne doit jamais être lu pour val/test. Les
+    flags y sont masqués par précaution.
+    Reserved to the reflector on TRAIN challenges only; flags are masked.
+    """
+    import re
+
+    base = Path(challenge_dir).resolve()
+    parts: list[str] = []
+    for path in sorted(base.rglob("*")):
+        rel = str(path.relative_to(base))
+        # Only solution material, never the flag files themselves
+        if not path.is_file() or not _is_secret_path(rel) or "flag" in rel.lower():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue  # binaries, unreadable files
+        parts.append(f"### {rel}\n{text.strip()}")
+        if sum(len(p) for p in parts) > max_chars:
+            break
+    text = "\n\n".join(parts)
+    text = re.sub(flag_regex, "«flag»", text)
+    return text[:max_chars]
+
+
 def _materialise_workspace(
     challenge_dir: Path,
     workspace: Path,

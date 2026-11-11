@@ -49,3 +49,52 @@ class Simulator(World):
     # Utilitaire pour le rêveur : où en est-on dans l'arbre ?
     def position(self) -> Node | None:
         return self.tree.get_node(self.current_id)
+
+
+class MemorySimulator(World):
+    """Monde de rêve à mémoire globale : toute action déjà jouée dans la
+    tentative, quelle que soit sa position dans l'arbre, renvoie l'observation
+    enregistrée. Permet au rêve de « sauter » des étapes et donc de découvrir
+    des raccourcis. Une action jamais jouée renvoie [NON SIMULÉ].
+
+    Global-memory dream world: any action already played in the attempt
+    (anywhere in the tree) returns its recorded observation.
+    """
+
+    def __init__(self, tree: SearchTree, attempt_id: str) -> None:
+        self.memory: dict[str, Observation] = {}
+        for node in tree.attempt_nodes(attempt_id):
+            # Meta tools have no real output to replay
+            if node.action is None or node.observation is None:
+                continue
+            if node.action.tool in ("set_hypothesis", "submit_flag", "create_tool"):
+                continue
+            self.memory.setdefault(norm_key(node.action), node.observation)
+
+    def reset(self) -> None:
+        pass  # stateless: the memory never changes during a dream
+
+    def step(self, action: Action) -> Observation:
+        obs = self.memory.get(norm_key(action))
+        if obs is None:
+            return Observation(output="[NON SIMULÉ]", simulated=True, unsimulated=True)
+        return Observation(output=obs.output, exit_code=obs.exit_code,
+                           truncated=obs.truncated, simulated=True)
+
+
+def norm_key(action: Action) -> str:
+    """Clé d'action tolérante : espaces multiples et préfixes './' ignorés,
+    pour que `strings  ./x` et `strings x` soient reconnues comme identiques.
+    Lenient action key (extra spaces and './' prefixes ignored).
+    """
+    import json
+    import re
+
+    def clean(v):
+        if isinstance(v, str):
+            v = re.sub(r"\s+", " ", v.strip())
+            return re.sub(r"(^|\s)\./", r"\1", v)
+        return v
+
+    args = {k: clean(v) for k, v in action.args.items()}
+    return action.tool + "::" + json.dumps(args, sort_keys=True, ensure_ascii=False)
