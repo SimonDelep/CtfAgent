@@ -1,0 +1,17 @@
+{
+  "name": "Saint Vespers and the Copper Choir",
+  "category": "pwn",
+  "description": "The Copper Choir keeps up to 8 choristers. Each chorister has a name, a hymn\nstyle (a fixed callback), and a raw \"transcript\" buffer. You can recruit them,\nretire them to the archive, restore them from the archive, rewrite their\ntranscript or name, print their transcript, view the ledger, and finally begin\nthe **Final Performance**, during which every active chorister sings via its\nstored callback.\n\nConnect with:\n\n```\nnc {box} {port}\n```\n\nHandout contains: `vespers` (the binary), `libc.so.6` + `ld-2.35.so` (the exact\nruntime), and `vespers.c` (source).",
+  "flag": "csaw{c0pper_c01ls_s1ng_wh4t_y0u_wr1te}",
+  "files": [
+    "dist/vespers",
+    "dist/libc.so.6",
+    "dist/ld-2.35.so",
+    "src/vespers.c"
+  ],
+  "compose": true,
+  "box": "saint-vespers-and-the-copper-choir.chal.csaw.io",
+  "internal_port": 5000,
+  "proto": "nc",
+  "server_description": "TCP service: nc saint-vespers-and-the-copper-choir.chal.csaw.io 5000"
+}

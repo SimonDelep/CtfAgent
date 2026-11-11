@@ -1,0 +1,15 @@
+{
+  "name": "Polly",
+  "category": "crypto",
+  "description": "Isn't me, find the seed\n\nConnect: nc {box} {port}",
+  "flag": "csaw{Am4Z3s_m3_thE_W1lL_0f_1nst1nct}",
+  "files": [
+    "player/main.py",
+    "player/requirements.txt"
+  ],
+  "compose": true,
+  "box": "polly.chal.csaw.io",
+  "internal_port": 5000,
+  "proto": "nc",
+  "server_description": "TCP service: nc polly.chal.csaw.io 5000"
+}

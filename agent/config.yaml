@@ -1,0 +1,39 @@
+# Agent CTF autonome — configuration (exécution LOCALE, pas de Docker)
+# Surchargeable par variables d'environnement : ${VAR:-defaut}
+
+llm:
+  # Endpoint OpenAI-compatible d'Ollama.
+  base_url: "${LLM_BASE_URL:-http://localhost:11434/v1}"
+  api_key:  "${LLM_API_KEY:-ollama}"
+  model:    "${LLM_MODEL:-huihui_ai/qwen3.5-abliterated:122b}"
+  temperature: 0.2
+  max_tokens: 4096
+  request_timeout: 600
+
+budget:
+  max_steps: 40
+  max_tokens_total: 400000
+  wall_clock_seconds: 2400
+
+executor:
+  default_timeout: 120        # timeout par commande (s)
+
+forge:
+  stuck_threshold: 3          # nb de tours sans progrès avant le nudge "forge un outil"
+  shared_lib: true            # promouvoir les outils forgés dans forge/lib/ (partagés)
+
+loop:
+  repeat_threshold: 3         # nb d'appels IDENTIQUES avant court-circuit (anti-boucle)
+  summary_interval: 10        # tous les N tours : résumé dans summary.md + compactage du contexte
+
+ui:
+  stream: true                # affichage live (pensée / action / résultat) dans le terminal
+
+flag:
+  regex: "(?i)csaw\\{[^}]{0,200}\\}"
+
+paths:
+  challenges_root: "CSAW-Quals"
+  runs_dir: "agent/runs"
+  forge_base: "agent/forge/base"
+  forge_lib: "agent/forge/lib"

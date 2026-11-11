@@ -1,0 +1,12 @@
+{
+  "name": "Secret Treaties",
+  "category": "crypto",
+  "description": "We built a \"quantum-resistant\" public-key scheme from the good old\nsubset-sum problem. Subset-sum is NP-complete, so surely nobody can read\nour messages without the private key... right?\n\nWe encrypted the flag nine bytes at a time. Each 72-bit block became a\nsingle number: the sum of the public-key entries selected by that block's\nbits.\n\nRecover the flag.",
+  "flag": "csaw{LLL_turns_kn4ps4cks_1nt0_p4nc4k3s_wh3n_d3ns1ty_1s_l0w}",
+  "files": [
+    "README.md",
+    "files/pubkey.txt",
+    "files/ciphertext.txt"
+  ],
+  "compose": false
+}

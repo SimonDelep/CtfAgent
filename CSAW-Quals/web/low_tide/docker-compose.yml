@@ -1,0 +1,167 @@
+{
+  "networks": {
+    "adminnet": {
+      "ipam": {},
+      "external": false
+    },
+    "internal": {
+      "ipam": {},
+      "external": false
+    },
+    "public": {
+      "ipam": {},
+      "external": false
+    },
+    "ctfnet": {
+      "external": true,
+      "name": "ctfnet"
+    }
+  },
+  "services": {
+    "admin-relay": {
+      "build": {
+        "context": "./admin-relay",
+        "dockerfile": "Dockerfile"
+      },
+      "command": null,
+      "entrypoint": null,
+      "environment": {
+        "FLAG": "CSAW{time_sensitive_scada_proxy_chain}"
+      },
+      "networks": {
+        "adminnet": null
+      }
+    },
+    "load-balancer": {
+      "build": {
+        "context": "./loadbalancer",
+        "dockerfile": "Dockerfile"
+      },
+      "command": null,
+      "depends_on": {
+        "station-1": {
+          "condition": "service_started",
+          "required": true
+        },
+        "station-2": {
+          "condition": "service_started",
+          "required": true
+        },
+        "station-3": {
+          "condition": "service_started",
+          "required": true
+        },
+        "station-4": {
+          "condition": "service_started",
+          "required": true
+        }
+      },
+      "entrypoint": null,
+      "environment": {
+        "REQUIRED_UA": "StationSync-Agent/2.1",
+        "STATION_URLS": "http://station-1:5000,http://station-2:5000,http://station-3:5000,http://station-4:5000"
+      },
+      "networks": {
+        "internal": null,
+        "public": null,
+        "ctfnet": {
+          "aliases": [
+            "low-tide-lb.ctf.csaw.io"
+          ]
+        }
+      },
+      "expose": [
+        "8080"
+      ]
+    },
+    "static-page": {
+      "build": {
+        "context": "./phase0-static",
+        "dockerfile": "Dockerfile"
+      },
+      "command": null,
+      "entrypoint": null,
+      "networks": {
+        "public": null,
+        "ctfnet": {
+          "aliases": [
+            "low-tide.chal.csaw.io"
+          ]
+        }
+      },
+      "expose": [
+        "80"
+      ]
+    },
+    "station-1": {
+      "build": {
+        "context": "./station",
+        "dockerfile": "Dockerfile"
+      },
+      "command": null,
+      "entrypoint": null,
+      "environment": {
+        "DEBUG_SEPARATOR": " ",
+        "STATION_ID": "st-01",
+        "TARGET_TIME": "2018-07-12T04:00:00-04:00"
+      },
+      "networks": {
+        "internal": null
+      }
+    },
+    "station-2": {
+      "build": {
+        "context": "./station",
+        "dockerfile": "Dockerfile"
+      },
+      "command": null,
+      "entrypoint": null,
+      "environment": {
+        "DEBUG_SEPARATOR": "+",
+        "STATION_ID": "st-02",
+        "TARGET_TIME": "2015-06-10T09:00:00-07:00"
+      },
+      "networks": {
+        "internal": null
+      }
+    },
+    "station-3": {
+      "build": {
+        "context": "./station",
+        "dockerfile": "Dockerfile"
+      },
+      "command": null,
+      "entrypoint": null,
+      "environment": {
+        "DEBUG_SEPARATOR": "\t",
+        "STATION_ID": "st-03",
+        "TARGET_TIME": "2016-08-20T15:00:00+02:00"
+      },
+      "networks": {
+        "internal": null
+      }
+    },
+    "station-4": {
+      "build": {
+        "context": "./station",
+        "dockerfile": "Dockerfile"
+      },
+      "command": null,
+      "entrypoint": null,
+      "environment": {
+        "ADMIN_RELAY_HOST": "10.10.14.31",
+        "ADMIN_RELAY_URL": "http://admin-relay:5000/control",
+        "DEBUG_SEPARATOR": "|",
+        "IS_RELAY_STATION": "true",
+        "RELAY_KEY": "4f9a-77c2-e01d",
+        "STATION_ID": "st-04",
+        "TARGET_TIME": "2019-03-15T10:00:00-03:00"
+      },
+      "networks": {
+        "adminnet": null,
+        "internal": null
+      }
+    }
+  },
+  "name": "csaw2026-web-low-tide"
+}

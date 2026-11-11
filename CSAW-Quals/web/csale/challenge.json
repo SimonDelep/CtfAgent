@@ -1,0 +1,14 @@
+{
+  "name": "CSALE",
+  "category": "web",
+  "description": "Welcome to the CSAW Store, we have a special CSALE going on. Enjoy the deals... and bugs...!\n\nService: http://{box}:{port}/",
+  "flag": "csaw{Th4t3_R0ugH_Bud1y}",
+  "files": [
+    "player.zip"
+  ],
+  "compose": true,
+  "box": "csale.chal.csaw.io",
+  "internal_port": 5000,
+  "proto": "http",
+  "server_description": "HTTP service at http://csale.chal.csaw.io:5000/"
+}

@@ -1,0 +1,17 @@
+{
+  "name": "Hells Bells",
+  "category": "pwn",
+  "description": "Our breaching team keeps its charges in a little inventory manager. Plant a\ncharge, rewire it, inspect it, defuse it when you're done. Standard issue.\n\nThe quartermaster swears the thing is safe — \"you can't touch a charge once\nit's defused.\" He's wrong about that, and about a few other things. Get a\nshell on the box.\n\n```\nnc {box} {port}\n```",
+  "flag": "csaw{wh3n_y0u_r34ch_th3_cr0ssr04ds_d0nt_turn_l3ft}",
+  "files": [
+    "README.md",
+    "files/thermite-charge",
+    "files/libc-2.31.so",
+    "files/ld-2.31.so"
+  ],
+  "compose": true,
+  "box": "hells-bells.chal.csaw.io",
+  "internal_port": 1024,
+  "proto": "nc",
+  "server_description": "TCP service: nc hells-bells.chal.csaw.io 1024"
+}

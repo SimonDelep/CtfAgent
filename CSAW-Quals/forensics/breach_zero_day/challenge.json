@@ -1,0 +1,12 @@
+{
+  "name": "Breach: Zero Day",
+  "category": "forensics",
+  "description": "--- Incoming Brief - 4:56 AM EST ---\nThe identification number checked out. It traced back to a private aircraft used for executive travel at Fenwick Analytics. We confirmed what the manifest coordinates suggested, someone had been tracking where Fenwick's leadership went, and when. Whoever this was is casing the company. We don't know why, and we don't know which executive they're targeting. \n\nThis intel leads us to assume they're trying to get into the company, either physically or electronically. We don't know which yet. The second option is easier so let's put our resources there. Fenwick Analytics has offices across multiple different sites, so this crew has many targets. Standby while we work with our analysts. \n--- End Brief ---\n\n--- Incoming Brief - 6:33 AM EST ---\nOur analysts put together a brief on Fenwick, suggesting that their Toulouse site might be a likely target. It runs a standard day shift, gates open at 8, and the last people to leave are gone before 7 PM latest. We let them know about the potential attack and are working with them now, pulling network captures, system logs, and memory images from at risk workstations that run overnight operations. Badge logs showed nothing unusal, but we found traces of something unusual moving through the network at odd hours. \n\nPublic data shows that the patterns we are seeing could align with actions of a specific group, but we have not been able to identify which one. These groups are known to borrow from each other's playbooks, so keep an eye out for any anomalies. Once you find these, maybe we can stop them before they exfiltrate anything too serious. \n\nThree exhibits came out of the investigation:\n\nfenwick_capture.pcap\nfenwick_security.xml\nfenwick_memdump.txt\n\nSee you again in the finals Agent.  \n--- End Brief ---\n\nFlag format: csaw{{C2INDICATOR_SERVICENAME_BACKDOORNAME}}",
+  "flag": "csaw{RELAYSHELL_WINDEFEND_FORESTTIGER}",
+  "files": [
+    "fenwick_capture.pcap",
+    "fenwick_security.xml",
+    "fenwick_memdump.txt"
+  ],
+  "compose": false
+}

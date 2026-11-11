@@ -1,0 +1,7 @@
+challenge.json
+README.md
+solver/
+tests/
+__pycache__/
+*.pyc
+.DS_Store

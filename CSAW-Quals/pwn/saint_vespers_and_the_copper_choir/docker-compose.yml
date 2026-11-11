@@ -1,0 +1,36 @@
+{
+  "networks": {
+    "default": {
+      "ipam": {},
+      "external": false
+    },
+    "ctfnet": {
+      "external": true,
+      "name": "ctfnet"
+    }
+  },
+  "services": {
+    "vespers": {
+      "build": {
+        "context": ".",
+        "dockerfile": "build/Dockerfile"
+      },
+      "command": null,
+      "entrypoint": null,
+      "networks": {
+        "default": null,
+        "ctfnet": {
+          "aliases": [
+            "saint-vespers-and-the-copper-choir.chal.csaw.io"
+          ]
+        }
+      },
+      "restart": "unless-stopped",
+      "platform": "linux/amd64",
+      "expose": [
+        "5000"
+      ]
+    }
+  },
+  "name": "csaw2026-pwn-saint-vespers-and-the-copper-choir"
+}

@@ -1,0 +1,11 @@
+{
+  "name": "Schrodinger's Backup",
+  "category": "forensics",
+  "description": "# Schrodinger's Backup\n\n**Category:** Forensics\n\n**Difficulty:** Easy-Medium (provisional)\n\n**Flag format:** `csaw{{...}}`\n\nThe Museum of Unfinished Futures built a time capsule that remembers everything\nits visitors saw. To save space, its controller keeps overwriting the same two\ndisplay panels. No screenshots. No audit table. Very forward-thinking.\n\nThen the power failed.\n\nThe restored database says the exhibit is closed. The conservator says the\ncapsule can only be opened with the history that actually happened. The intern\nsays every page on disk is equally real.\n\nOne of them is wrong.\n\nRecover the capsule's message from `files/evidence.zip`. The archive contains the\ncontroller database, its companion journal, the sealed capsule, and the recorder's\nsource and operating notes. Everything needed is offline.\n\nKeep the original evidence intact and work on copies. Opening a SQLite database\nnormally can change or remove its companion journal.\n",
+  "flag": "csaw{th3_c4t_c0mm1tt3d_but_th3_j0urn4l_r3m3mb3r5}",
+  "files": [
+    "README.md",
+    "files/evidence.zip"
+  ],
+  "compose": false
+}

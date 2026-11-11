@@ -1,0 +1,35 @@
+{
+  "networks": {
+    "default": {
+      "ipam": {},
+      "external": false
+    },
+    "ctfnet": {
+      "external": true,
+      "name": "ctfnet"
+    }
+  },
+  "services": {
+    "reliquary": {
+      "build": {
+        "context": "./.",
+        "dockerfile": "Dockerfile"
+      },
+      "command": null,
+      "entrypoint": null,
+      "networks": {
+        "default": null,
+        "ctfnet": {
+          "aliases": [
+            "taking-on-the-temple.chal.csaw.io"
+          ]
+        }
+      },
+      "restart": "unless-stopped",
+      "expose": [
+        "5000"
+      ]
+    }
+  },
+  "name": "csaw2026-crypto-taking-on-the-temple"
+}

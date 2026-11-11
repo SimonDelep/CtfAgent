@@ -1,0 +1,12 @@
+{
+  "name": "House of Hollow Houses",
+  "category": "misc",
+  "description": "Misc / Web. A labyrinth of \"hollow\" rooms served as a static website — each room links to others, and the flag lies waiting in the sanctum. Players wander the interlinked rooms (and read what the pages are quietly telling them) to find the way in. Hosted service on port **8000**.\n\nService: http://{box}:{port}/",
+  "flag": "csaw{w4nd3r3r_0f_th3_h0ll0w_h0us3}",
+  "files": [],
+  "compose": true,
+  "box": "house-of-hollow-houses.chal.csaw.io",
+  "internal_port": 8000,
+  "proto": "http",
+  "server_description": "HTTP service at http://house-of-hollow-houses.chal.csaw.io:8000/"
+}

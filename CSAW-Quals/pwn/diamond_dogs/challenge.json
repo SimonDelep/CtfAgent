@@ -1,0 +1,17 @@
+{
+  "name": "Diamond Dogs",
+  "category": "pwn",
+  "description": "The K-9 unit runs a little manager: adopt a dog, give it a name, and issue a\ncommand to make it bark. When a dog retires you release it back to the wild.\nThere's also a scratchpad for filing notes.\n\nTrouble is, a released dog doesn't always stay gone. Get a shell.\n\n```\nnc {box} {port}\n```",
+  "flag": "csaw{w3dd1ngs_4r3_b4s1c4lly_fun3r4ls_w1th_c4k3}",
+  "files": [
+    "README.md",
+    "files/guard-dog",
+    "files/libc-2.31.so",
+    "files/ld-2.31.so"
+  ],
+  "compose": true,
+  "box": "diamond-dogs.chal.csaw.io",
+  "internal_port": 1025,
+  "proto": "nc",
+  "server_description": "TCP service: nc diamond-dogs.chal.csaw.io 1025"
+}

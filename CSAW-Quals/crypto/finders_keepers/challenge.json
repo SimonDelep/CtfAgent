@@ -1,0 +1,10 @@
+{
+  "name": "finders keepers",
+  "category": "crypto",
+  "description": "Find the hidden message in the attached video. Submit the decoded plaintext without a flag wrapper.",
+  "flag": "cantfindit",
+  "files": [
+    "finderskeepers.mp4"
+  ],
+  "compose": false
+}

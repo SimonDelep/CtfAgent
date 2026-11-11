@@ -1,0 +1,12 @@
+{
+  "name": "Flag Checker",
+  "category": "web",
+  "description": "The Flag Checker is online. Recover the flag from the service.\n\nService: http://{box}:{port}/",
+  "flag": "csaw{tim3_w4its_f0r_n0_0ne}",
+  "files": [],
+  "compose": true,
+  "box": "flagchecker.chal.csaw.io",
+  "internal_port": 5000,
+  "proto": "http",
+  "server_description": "HTTP service at http://flagchecker.chal.csaw.io:5000/"
+}

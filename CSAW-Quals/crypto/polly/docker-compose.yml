@@ -1,0 +1,37 @@
+{
+  "networks": {
+    "default": {
+      "ipam": {},
+      "external": false
+    },
+    "ctfnet": {
+      "external": true,
+      "name": "ctfnet"
+    }
+  },
+  "services": {
+    "challenge": {
+      "build": {
+        "context": "./deployment",
+        "dockerfile": "Dockerfile"
+      },
+      "command": null,
+      "entrypoint": null,
+      "environment": {
+        "FLAG": "csaw{Am4Z3s_m3_thE_W1lL_0f_1nst1nct}"
+      },
+      "networks": {
+        "default": null,
+        "ctfnet": {
+          "aliases": [
+            "polly.chal.csaw.io"
+          ]
+        }
+      },
+      "expose": [
+        "5000"
+      ]
+    }
+  },
+  "name": "csaw2026-crypto-polly"
+}

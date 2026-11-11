@@ -1,0 +1,12 @@
+{
+  "name": "Low Tide",
+  "category": "web",
+  "description": "A water treatment utility's remote monitoring system has been left\nonline with an old technician login page still reachable. The login\ndoes not work anymore, but the page was never actually taken down.\n\nService: http://{box}:{port}/",
+  "flag": "CSAW{time_sensitive_scada_proxy_chain}",
+  "files": [],
+  "compose": true,
+  "box": "low-tide.chal.csaw.io",
+  "internal_port": 80,
+  "proto": "http",
+  "server_description": "HTTP service at http://low-tide.chal.csaw.io:80/"
+}

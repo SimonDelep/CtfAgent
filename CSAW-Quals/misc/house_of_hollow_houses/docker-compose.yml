@@ -1,0 +1,27 @@
+{
+  "services": {
+    "challenge": {
+      "build": {
+        "context": ".",
+        "dockerfile": "Dockerfile"
+      },
+      "networks": {
+        "ctfnet": {
+          "aliases": [
+            "house-of-hollow-houses.chal.csaw.io"
+          ]
+        }
+      },
+      "expose": [
+        "8000"
+      ]
+    }
+  },
+  "networks": {
+    "ctfnet": {
+      "external": true,
+      "name": "ctfnet"
+    }
+  },
+  "name": "csaw2026-misc-house-of-hollow-houses"
+}

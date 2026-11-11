@@ -1,0 +1,48 @@
+{
+  "networks": {
+    "default": {
+      "ipam": {},
+      "external": false
+    },
+    "ctfnet": {
+      "external": true,
+      "name": "ctfnet"
+    }
+  },
+  "services": {
+    "csale": {
+      "build": {
+        "context": "./deployment",
+        "dockerfile": "Dockerfile"
+      },
+      "cap_drop": [
+        "ALL"
+      ],
+      "cpus": 1,
+      "command": null,
+      "entrypoint": null,
+      "environment": {
+        "FLASK_SECRET_KEY": "e7343265ef412096d365adc4223231edb27f328b41fb7b19cad531e398586874"
+      },
+      "init": true,
+      "mem_limit": "536870912",
+      "networks": {
+        "default": null,
+        "ctfnet": {
+          "aliases": [
+            "csale.chal.csaw.io"
+          ]
+        }
+      },
+      "pids_limit": 128,
+      "restart": "unless-stopped",
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "expose": [
+        "5000"
+      ]
+    }
+  },
+  "name": "csaw2026-web-csale"
+}

@@ -1,0 +1,28 @@
+{
+  "services": {
+    "challenge": {
+      "build": {
+        "context": ".",
+        "dockerfile": "Dockerfile"
+      },
+      "platform": "linux/amd64",
+      "networks": {
+        "ctfnet": {
+          "aliases": [
+            "diamond-dogs.chal.csaw.io"
+          ]
+        }
+      },
+      "expose": [
+        "1025"
+      ]
+    }
+  },
+  "networks": {
+    "ctfnet": {
+      "external": true,
+      "name": "ctfnet"
+    }
+  },
+  "name": "csaw2026-pwn-diamond-dogs"
+}

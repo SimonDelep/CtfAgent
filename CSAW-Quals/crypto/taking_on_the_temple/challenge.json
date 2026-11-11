@@ -1,0 +1,12 @@
+{
+  "name": "Midnight Vault",
+  "category": "crypto",
+  "description": "The crew hit the wrong safehouse and found a ghost ledger hidden in the snow.\n\nThree lockboxes were built to protect a vault on the black market circuit.\nEach hides a fragment of the final key.\nNone of them alone will open the job.\n\nThe first remembers.\nThe second preserves.\nThe third endures.\n\nA final note on the stolen page reads:\n\n    ⠁ ⠅⠑⠽ ⠙⠊⠧⠊⠙⠑⠙\n    ⠃⠗⠁⠊⠇⠇⠑ ⠕⠏⠑⠝⠎ ⠞⠓⠑ ⠕⠇⠙ ⠗⠑⠛⠊⠎\n\nThe rest of the plan is missing.\n\nRecover the three fragments, rebuild the key, and wake the old registry before the getaway van leaves.\n\nThe score goes to whoever gets in, gets out, and keeps their hands clean.\n\nService: http://{box}:{port}/\nThis cryptography challenge uses HTTP. Access the URL above with an HTTP client.",
+  "flag": "csaw{tH3_c0fF3r_w4s_n3v3r_th3_gU4rd1an}",
+  "files": [],
+  "compose": true,
+  "box": "taking-on-the-temple.chal.csaw.io",
+  "internal_port": 5000,
+  "proto": "http",
+  "server_description": "HTTP service at http://taking-on-the-temple.chal.csaw.io:5000/"
+}

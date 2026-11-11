@@ -1,0 +1,11 @@
+{
+  "name": "Ghost in the Machine",
+  "category": "forensics",
+  "description": "# Ghost in the Machine\n\n**Category:** Forensics / Networking\n**Difficulty:** Hard\n**Flag format:** `csaw{{...}}`\n\n---\n\nWe intercepted a host quietly beaconing out of a locked-down network. The\nfirewall logs every byte that leaves — and every byte here is boring. Same\nsource, same destination, the same little `PING` payload, over and over.\n\nAnd yet something is getting out. It's buried in the noise, it's scrambled,\nand the operator left just enough on the wire to unscramble it — if you know\nwhich columns to trust.\n\nFind the message.\n\n## Files\n\n- `capture.pcap` — 504 packets. Open it in Wireshark, or parse it yourself.\n\n## Hint\n\nLook at the columns you usually ignore. Not every packet is telling the\ntruth — some are just there to throw off your averages. And once you read the\nsignal, it still won't look like a flag until you find what it was mixed with\n(the sender left the key hiding in plain sight, in another column you skipped).\n",
+  "flag": "csaw{t1m1ng_1s_3v3ryth1ng_1n_th3_s1l3nt_ch4nn3l}",
+  "files": [
+    "README.md",
+    "files/capture.pcap"
+  ],
+  "compose": false
+}

@@ -1,0 +1,14 @@
+{
+  "crypto/finders_keepers": {
+    "challenge": "crypto/finders_keepers",
+    "solved": true,
+    "correct": false,
+    "flag": "csaw{b0lX@zO`lYma7jYpb4z5_h7_i0?t}",
+    "steps": 13,
+    "tokens": 55545,
+    "forged_tools": 0,
+    "reason": "flag détecté dans une sortie d'outil",
+    "run_dir": "/home/etudiantelambda/Documents/CSAW_LLM_2026-BTN-DLP/csaw/agent/runs/crypto_finders_keepers_20261111-225929",
+    "updated": "2026-11-11T23:06:02"
+  }
+}
