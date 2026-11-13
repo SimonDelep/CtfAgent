@@ -29,6 +29,9 @@ loop:
 ui:
   stream: true                # affichage live (pensée / action / résultat) dans le terminal
 
+logging:
+  llm_io: true                # journalise chaque échange LLM dans <run_dir>/messages/NNNN.json
+
 flag:
   regex: "(?i)csaw\\{[^}]{0,200}\\}"
 

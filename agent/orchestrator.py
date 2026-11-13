@@ -80,6 +80,8 @@ def solve_challenge(chal_dir: Path, cfg: dict, use_ground_truth: bool = True, st
     prior = _prior_summary(ledger, category, chal_dir.name)
 
     llm = LLMClient(cfg)
+    if cfg.get("logging", {}).get("llm_io", True):
+        llm.enable_io_log(run_dir / "messages")   # 1 fichier JSON par échange (requête+réponse)
     gt = meta.get("flag") if use_ground_truth else None
     verifier = FlagVerifier(cfg["flag"]["regex"], ground_truth=gt)
     executor = LocalExecutor(workdir, chal_dir, int(cfg["executor"]["default_timeout"]))

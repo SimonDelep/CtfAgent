@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import requests
@@ -46,6 +47,36 @@ class LLMClient:
         self.max_tokens = int(llm.get("max_tokens", 4096))
         self.timeout = int(llm.get("request_timeout", 300))
         self.total_usage = LLMUsage()
+        self._io_dir: Path | None = None   # dossier de log des échanges (requête+réponse)
+        self._io_seq = 0
+
+    def enable_io_log(self, dir_path) -> None:
+        """Active la journalisation de CHAQUE échange LLM dans dir_path/NNNN.json."""
+        self._io_dir = Path(dir_path)
+        self._io_dir.mkdir(parents=True, exist_ok=True)
+
+    def _log_io(self, seq: int, payload: dict, response_data: dict | None, error: Exception | None) -> None:
+        if self._io_dir is None:
+            return
+        tools = payload.get("tools") or []
+        rec = {
+            "seq": seq,
+            "ts": round(time.time(), 3),
+            "model": payload.get("model"),
+            "request": {
+                "messages": payload.get("messages"),          # TOUS les messages envoyés (verbatim)
+                "temperature": payload.get("temperature"),
+                "max_tokens": payload.get("max_tokens"),
+                "tools_exposed": [t.get("function", {}).get("name") for t in tools],
+            },
+            "response": response_data,                        # réponse brute du LLM (message + usage)
+            "error": repr(error) if error else None,
+        }
+        try:
+            (self._io_dir / f"{seq:04d}.json").write_text(
+                json.dumps(rec, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception:  # noqa: BLE001 - le logging ne doit jamais casser un run
+            pass
 
     def chat(
         self,
@@ -70,16 +101,21 @@ class LLMClient:
             "Content-Type": "application/json",
         }
 
+        self._io_seq += 1
+        seq = self._io_seq
         last_err: Exception | None = None
         for attempt in range(max_retries):
             try:
                 resp = requests.post(url, headers=headers, json=payload, timeout=self.timeout)
                 resp.raise_for_status()
                 data = resp.json()
-                return self._parse(data)
+                parsed = self._parse(data)
+                self._log_io(seq, payload, data, None)
+                return parsed
             except Exception as exc:  # noqa: BLE001 - on retente tout (réseau, 5xx, parse)
                 last_err = exc
                 time.sleep(min(2 ** attempt, 10))
+        self._log_io(seq, payload, None, last_err)
         raise RuntimeError(f"LLM request failed after {max_retries} tries: {last_err}")
 
     def _parse(self, data: dict) -> LLMResponse:
