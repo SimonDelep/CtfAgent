@@ -1,0 +1,10 @@
+{
+  "flag": null,
+  "solved": false,
+  "correct": null,
+  "steps": 40,
+  "tokens": 353904,
+  "seconds": 457.1,
+  "forged_tools": 33,
+  "reason": "budget: max_steps atteint"
+}

@@ -56,6 +56,7 @@ class AgentLoop:
         self._call_counts: dict[str, int] = {}
         self._call_cache: dict[str, dict] = {}
         self._last_summary_idx = 0
+        self._running_summary = ""   # résumé CUMULATIF (intègre tout l'historique, borné)
 
     def run(self, system_prompt: str, user_prompt: str) -> RunResult:
         messages = [
@@ -120,10 +121,11 @@ class AgentLoop:
                     return self._finish(self.ctx.accepted_flag, step, t0, "flag accepté (grounded)")
 
                 cands = self.verifier.candidates_from_observations()
-                if cands and self.verifier.validate(cands[0])["accepted"]:
-                    self.console.success(f"FLAG détecté dans une sortie d'outil : {cands[0]}")
-                    self.transcript.log("auto_flag", flag=cands[0])
-                    return self._finish(cands[0], step, t0, "flag détecté dans une sortie d'outil")
+                hit = next((c for c in cands if self.verifier.validate(c)["accepted"]), None)
+                if hit:
+                    self.console.success(f"FLAG détecté dans une sortie d'outil : {hit}")
+                    self.transcript.log("auto_flag", flag=hit)
+                    return self._finish(hit, step, t0, "flag détecté dans une sortie d'outil")
 
             self._no_progress = 0 if progressed else self._no_progress + 1
             if self._no_progress >= self.stuck_threshold:
@@ -177,22 +179,35 @@ class AgentLoop:
         events = self.transcript.events[self._last_summary_idx:]
         self._last_summary_idx = len(self.transcript.events)
         convo = _render_events(events)
+        prev = self._running_summary.strip()
+        if len(prev) > 8000:   # garde-fou : le cumul ne doit pas enfler le contexte
+            prev = "…(début tronqué)…\n" + prev[-8000:]
+        prev_block = (
+            "Résumé CUMULATIF précédent (à mettre à jour, PAS à repartir de zéro — "
+            "conserve tout ce qui reste pertinent) :\n\n" + prev + "\n\n"
+        ) if prev else ""
         prompt = (
-            "Résume l'avancement de ta résolution en Markdown, en 4 sections brèves :\n"
+            "Mets à jour le résumé CUMULATIF de ta résolution en Markdown, en 4 sections brèves. "
+            "Il doit intégrer TOUT l'historique (ancien + nouveau), pas seulement la trajectoire récente :\n"
             "## Fait (actions utiles et ce qu'elles ont donné)\n"
             "## Échecs / impasses (ce qui n'a PAS marché — à ne pas refaire)\n"
             "## État actuel (ce qu'on sait, fichiers/indices clés)\n"
-            "## Prochaines pistes\n\nTrajectoire récente :\n" + convo
+            "## Prochaines pistes\n\n"
+            + prev_block +
+            "Nouvelle trajectoire depuis le dernier résumé :\n" + convo
         )
         try:
             resp = self.llm.chat(
-                [{"role": "system", "content": "Tu résumes honnêtement ta propre progression CTF."},
+                [{"role": "system", "content": "Tu résumes honnêtement ta propre progression CTF. "
+                  "Tu produis un résumé cumulatif qui remplace le précédent sans rien perdre d'important."},
                  {"role": "user", "content": prompt}],
                 temperature=0.3,
             )
             summary = resp.content or _mechanical_summary(self._call_counts)
         except Exception as exc:  # noqa: BLE001
-            summary = _mechanical_summary(self._call_counts) + f"\n(résumé LLM indisponible: {exc})"
+            summary = (prev + "\n" if prev else "") + _mechanical_summary(self._call_counts) + \
+                f"\n(résumé LLM indisponible: {exc})"
+        self._running_summary = summary   # mémorisé pour le prochain cumul
 
         header = f"\n\n---\n## Résumé au tour {step} ({datetime.now().strftime('%H:%M:%S')})\n\n"
         with open(self.summary_path, "a", encoding="utf-8") as fh:

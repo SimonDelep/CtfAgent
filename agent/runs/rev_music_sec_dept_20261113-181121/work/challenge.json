@@ -1,0 +1,10 @@
+{
+  "name": "Music Security Department",
+  "category": "rev",
+  "description": "You've heard rumours of a flag stashed away in the production studio of a prominent EDM artist - but she's contracted the infamous Music Security Department to lock it up inside a decommissioned CDJ! Can you manage to heist the flag?\n\nThe deck is still powered up and answering on its patch port - connect to it, then hit 'Run'!\n\n$ nc localhost 4562\n \n=[ CSIRAC CDJ-4562 ]==========================\nMUSIC SECURITY DEPARTMENT :: DRM enforcement unit\nunit CSIRAC   project I_LOVE_MY_COMPUTER\n1 stem SEALED -- type HELP\n \nCSIRAC>\nNotes:\n\nPurr-Data or pd-l2ork is required, vanilla Pure Data will not work.\nYou might want to check out this Purr-Data theme :)\ncsirac.pd_linux / csirac.dll will not lead you to the flag.\nThe console needs one LF-terminated line at a time.\nFrequency starts at 10Hz - you'll likely want to increase it to speed up the nc interface, or slow it down to analyse the patch.\nThere's a \"Reset\" button.",
+  "flag": "csaw{~i_love_my_computer_&_it_loves_me~<3}",
+  "files": [
+    "csirac.zip"
+  ],
+  "compose": false
+}

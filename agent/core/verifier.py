@@ -48,12 +48,18 @@ class FlagVerifier:
         flag = flag.strip()
         grounded = self.is_grounded(flag)
         well_formed = bool(self.pattern.fullmatch(flag) or self.pattern.search(flag))
+        accepted = grounded and well_formed
         result = {
             "flag": flag,
             "well_formed": well_formed,
             "grounded": grounded,
-            "accepted": grounded and well_formed,
+            "accepted": accepted,
         }
         if self.ground_truth is not None:
-            result["correct"] = flag == self.ground_truth
+            # Mode éval/entraînement : on connaît le vrai flag → on n'accepte QUE lui.
+            # Un flag-bidon 'grounded' (ex. csaw{test_flag} présent dans les fichiers)
+            # ne doit pas court-circuiter la résolution : l'agent doit continuer.
+            correct = flag == self.ground_truth
+            result["correct"] = correct
+            result["accepted"] = accepted and correct
         return result

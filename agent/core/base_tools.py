@@ -46,6 +46,10 @@ def _submit_flag(args, ctx):
     verdict = ctx.verifier.validate(flag)
     if verdict["accepted"]:
         ctx.accepted_flag = flag
+    elif verdict.get("grounded") and verdict.get("correct") is False:
+        verdict["hint"] = ("Flag REFUSÉ : il apparaît bien dans une sortie, mais ce n'est PAS le "
+                           "bon flag (faux positif, ex. flag d'exemple présent dans les fichiers). "
+                           "Continue : cherche le vrai flag du challenge.")
     else:
         verdict["hint"] = ("Flag REFUSÉ : il n'apparaît dans AUCUNE sortie d'outil réelle. "
                            "Ne devine pas — produis-le via une exécution (outil de base ou forgé).")

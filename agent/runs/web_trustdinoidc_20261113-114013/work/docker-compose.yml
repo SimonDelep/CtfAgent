@@ -1,0 +1,125 @@
+{
+  "networks": {
+    "default": {
+      "ipam": {},
+      "external": false
+    },
+    "ctfnet": {
+      "external": true,
+      "name": "ctfnet"
+    }
+  },
+  "services": {
+    "paleoid": {
+      "build": {
+        "context": "./deployment",
+        "dockerfile": "Dockerfile"
+      },
+      "cap_drop": [
+        "ALL"
+      ],
+      "cpus": 0.5,
+      "command": [
+        "gunicorn",
+        "--workers",
+        "1",
+        "--bind",
+        "0.0.0.0:8991",
+        "idp:app"
+      ],
+      "entrypoint": null,
+      "environment": {
+        "ACCENT": "#b98a3d",
+        "ISSUER": "paleoid.example.com"
+      },
+      "init": true,
+      "mem_limit": "268435456",
+      "networks": {
+        "default": null
+      },
+      "pids_limit": 64,
+      "restart": "unless-stopped",
+      "security_opt": [
+        "no-new-privileges:true"
+      ]
+    },
+    "strataid": {
+      "build": {
+        "context": "./deployment",
+        "dockerfile": "Dockerfile"
+      },
+      "cap_drop": [
+        "ALL"
+      ],
+      "cpus": 0.5,
+      "command": [
+        "gunicorn",
+        "--workers",
+        "1",
+        "--bind",
+        "0.0.0.0:8992",
+        "idp:app"
+      ],
+      "entrypoint": null,
+      "environment": {
+        "ACCENT": "#3d9bb9",
+        "ISSUER": "strataid.example.com"
+      },
+      "init": true,
+      "mem_limit": "268435456",
+      "networks": {
+        "default": null
+      },
+      "pids_limit": 64,
+      "restart": "unless-stopped",
+      "security_opt": [
+        "no-new-privileges:true"
+      ]
+    },
+    "trustdinoidc": {
+      "build": {
+        "context": "./deployment",
+        "dockerfile": "Dockerfile"
+      },
+      "cap_drop": [
+        "ALL"
+      ],
+      "cpus": 1,
+      "command": null,
+      "depends_on": {
+        "paleoid": {
+          "condition": "service_started",
+          "required": true
+        },
+        "strataid": {
+          "condition": "service_started",
+          "required": true
+        }
+      },
+      "entrypoint": null,
+      "environment": {
+        "FLAG": "csaw{str4ta_sk1pped_th3_p1n}",
+        "PUBLIC_BASE_URL": ""
+      },
+      "init": true,
+      "mem_limit": "536870912",
+      "networks": {
+        "default": null,
+        "ctfnet": {
+          "aliases": [
+            "trustdinoidc.chal.csaw.io"
+          ]
+        }
+      },
+      "pids_limit": 128,
+      "restart": "unless-stopped",
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "expose": [
+        "8990"
+      ]
+    }
+  },
+  "name": "csaw2026-web-trustdinoidc"
+}

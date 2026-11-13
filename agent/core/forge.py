@@ -35,10 +35,13 @@ class Forge:
         self.lib_dir = Path(lib_dir)
         self.run_forge_dir.mkdir(parents=True, exist_ok=True)
         self.lib_dir.mkdir(parents=True, exist_ok=True)
-        self.target_dir = self.lib_dir if shared_lib else self.run_forge_dir
-        # les deux dossiers sont scannés ; l'outil le plus spécifique (par-run) l'emporte
-        registry.add_forge_dir(self.lib_dir)
-        registry.add_forge_dir(self.run_forge_dir)
+        self.shared_lib = shared_lib
+        # Un outil forgé est TOUJOURS écrit dans le dossier du run → actif immédiatement,
+        # sans polluer le contexte des autres runs. S'il est partagé, on en dépose une copie
+        # dans la bibliothèque (catalogue consultable via search_tools/load_tool).
+        self.target_dir = self.run_forge_dir
+        registry.add_forge_dir(self.lib_dir, library=True)     # catalogue (non exposé par défaut)
+        registry.add_forge_dir(self.run_forge_dir, library=False)  # actif pour ce run
         registry.reload_forged()
 
     # --- construction / validation --------------------------------------
@@ -51,7 +54,8 @@ class Forge:
         if not _NAME_RE.match(name):
             return "nom invalide : minuscules/chiffres/_ , 2-41 caractères, commence par une lettre."
         if name in ("run_shell", "run_python", "read_file", "copy_challenge_file",
-                    "submit_flag", "forge_tool", "edit_tool", "list_tools"):
+                    "submit_flag", "forge_tool", "edit_tool", "list_tools",
+                    "search_tools", "load_tool"):
             return f"'{name}' est un outil réservé : choisis un autre nom."
         try:
             tree = ast.parse(source)
@@ -69,6 +73,8 @@ class Forge:
     def _write(self, name: str, source: str) -> Path:
         path = self.target_dir / f"{name}.py"
         path.write_text(source, encoding="utf-8")
+        if self.shared_lib:   # dépose une copie partagée pour les runs futurs
+            (self.lib_dir / f"{name}.py").write_text(source, encoding="utf-8")
         self.registry.reload_forged()
         return path
 
@@ -122,7 +128,23 @@ class Forge:
         return {"ok": True, "message": f"outil '{name}' modifié.", "path": str(path)}
 
     def list_tools(self, args, ctx):
-        return {"ok": True, "tools": self.registry.describe()}
+        return {"ok": True, "tools": self.registry.describe(),
+                "bibliotheque_disponible": self.registry.library_count(),
+                "note": "search_tools(query) pour fouiller la bibliothèque partagée ; "
+                        "load_tool(name) pour en activer un."}
+
+    def search_tools(self, args, ctx):
+        q = str(args.get("query", "")).strip()
+        hits = self.registry.search_library(q)
+        return {"ok": True, "query": q, "count": len(hits), "tools": hits,
+                "note": "Active un outil avec load_tool(name) avant de l'appeler."}
+
+    def load_tool(self, args, ctx):
+        name = str(args.get("name", "")).strip()
+        if self.registry.activate(name):
+            return {"ok": True, "message": f"outil '{name}' activé — appelable dès ce tour."}
+        return {"ok": False, "error": f"'{name}' introuvable dans la bibliothèque.",
+                "hint": "liste les candidats avec search_tools(query)."}
 
     # --- enregistrement des méta-outils ---------------------------------
     def register_meta_tools(self) -> None:
@@ -152,6 +174,25 @@ class Forge:
 
         self.registry.register_native({
             "name": "list_tools",
-            "description": "Liste tous les outils disponibles (base + forgés) avec leur description.",
+            "description": "Liste les outils ACTIFS (base + forgés ce run) et le nombre d'outils en bibliothèque.",
             "parameters": {"type": "object", "properties": {}},
         }, self.list_tools)
+
+        self.registry.register_native({
+            "name": "search_tools",
+            "description": ("Fouille la BIBLIOTHÈQUE d'outils réutilisables forgés lors de runs précédents "
+                            "(non chargés par défaut pour garder le contexte léger). Renvoie les outils "
+                            "dont le nom/description matche les mots-clés. Fais-le quand tu commences une "
+                            "manœuvre récurrente (parsing pcap, LSB, LLL, client réseau…) avant d'en forger un."),
+            "parameters": {"type": "object", "properties": {
+                "query": {"type": "string", "description": "mots-clés (ex: 'pcap tcp', 'lsb wav', 'knapsack lll')."},
+            }, "required": ["query"]},
+        }, self.search_tools)
+
+        self.registry.register_native({
+            "name": "load_tool",
+            "description": "Active un outil trouvé via search_tools pour pouvoir l'appeler ce tour-ci.",
+            "parameters": {"type": "object", "properties": {
+                "name": {"type": "string", "description": "nom exact de l'outil de bibliothèque."},
+            }, "required": ["name"]},
+        }, self.load_tool)

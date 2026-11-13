@@ -36,6 +36,35 @@ def _resolve(p: str | Path) -> Path:
     return p if p.is_absolute() else REPO_ROOT / p
 
 
+def _prior_summary(ledger: Ledger, category: str, dirname: str, max_chars: int = 6000) -> str | None:
+    """Résumé de la DERNIÈRE tentative échouée (summary.md de son run_dir), pour reprise.
+
+    On ne réinjecte que pour un échec (un résolu est sauté en amont). On garde la fin
+    du fichier (les tours les plus récents) et on borne la taille.
+    """
+    e = ledger.get(category, dirname)
+    if not e or (e.get("solved") and e.get("correct") is not False):
+        return None
+    run_dir = e.get("run_dir")
+    if not run_dir:
+        return None
+    summary_path = Path(run_dir) / "summary.md"
+    if not summary_path.exists():
+        return None
+    try:
+        text = summary_path.read_text(encoding="utf-8").strip()
+    except Exception:  # noqa: BLE001
+        return None
+    if not text:
+        return None
+    if len(text) > max_chars:
+        text = "…(début tronqué)…\n" + text[-max_chars:]
+    reason = e.get("reason") or "inconnue"
+    header = (f"Tentative précédente NON résolue (arrêt : {reason}). "
+              f"Appuie-toi sur ces acquis, ne refais pas la reconnaissance de zéro.")
+    return header + "\n\n" + text
+
+
 def solve_challenge(chal_dir: Path, cfg: dict, use_ground_truth: bool = True, stream: bool | None = None) -> RunResult:
     meta = load_challenge(chal_dir)
     category = meta.get("category", "misc")
@@ -45,6 +74,10 @@ def solve_challenge(chal_dir: Path, cfg: dict, use_ground_truth: bool = True, st
     workdir = run_dir / "work"
     run_forge_dir = run_dir / "forge"
     transcript = Transcript(run_dir)
+
+    # Reprise : récupère le résumé de la tentative précédente (avant d'écraser le ledger).
+    ledger = Ledger(_resolve(cfg["paths"]["runs_dir"]) / "ledger.json")
+    prior = _prior_summary(ledger, category, chal_dir.name)
 
     llm = LLMClient(cfg)
     gt = meta.get("flag") if use_ground_truth else None
@@ -67,7 +100,7 @@ def solve_challenge(chal_dir: Path, cfg: dict, use_ground_truth: bool = True, st
         "stream": bool(cfg.get("ui", {}).get("stream", True)) if stream is None else stream,
     }
     loop = AgentLoop(llm, ctx, transcript, cfg["budget"], options=loop_opts)
-    result = loop.run(build_system_prompt(category), build_user_prompt(meta))
+    result = loop.run(build_system_prompt(category), build_user_prompt(meta, prior_summary=prior))
 
     transcript.log("result", **result.__dict__)
     generate_writeup(llm, meta, transcript, result.flag)
@@ -75,7 +108,7 @@ def solve_challenge(chal_dir: Path, cfg: dict, use_ground_truth: bool = True, st
     (run_dir / "result.json").write_text(json.dumps(result.__dict__, indent=2, ensure_ascii=False), encoding="utf-8")
 
     # suivi persistant (reprise sans tout refaire)
-    Ledger(_resolve(cfg["paths"]["runs_dir"]) / "ledger.json").update(category, chal_dir.name, result, run_dir)
+    ledger.update(category, chal_dir.name, result, run_dir)
     return result
 
 

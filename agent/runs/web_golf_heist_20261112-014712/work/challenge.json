@@ -1,0 +1,12 @@
+{
+  "name": "Golf Heist",
+  "category": "web",
+  "description": "Visit Golf Heist and recover the flag from its vault.\n\nService: http://{box}:{port}/",
+  "flag": "csaw{el3gant_sw1ng_n3ver_c4ught}",
+  "files": [],
+  "compose": true,
+  "box": "golf-heist.chal.csaw.io",
+  "internal_port": 8000,
+  "proto": "http",
+  "server_description": "HTTP service at http://golf-heist.chal.csaw.io:8000/"
+}

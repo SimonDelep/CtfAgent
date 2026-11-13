@@ -1,0 +1,10 @@
+{
+  "flag": "csaw{Am4Z3s_m3_thE_W1lL_0f_1nst1nct}",
+  "solved": true,
+  "correct": true,
+  "steps": 19,
+  "tokens": 128015,
+  "seconds": 151.6,
+  "forged_tools": 23,
+  "reason": "flag détecté dans une sortie d'outil"
+}

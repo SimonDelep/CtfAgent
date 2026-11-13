@@ -1,0 +1,12 @@
+{
+  "name": "TRUSTDINOIDC",
+  "category": "web",
+  "description": "TrustDinOIDC sells dinosaur posters to anyone who can prove they're logged in. The Flagosaurus print is for admins only.\n\nService: http://{box}:{port}/",
+  "flag": "csaw{str4ta_sk1pped_th3_p1n}",
+  "files": [],
+  "compose": true,
+  "box": "trustdinoidc.chal.csaw.io",
+  "internal_port": 8990,
+  "proto": "http",
+  "server_description": "HTTP service at http://trustdinoidc.chal.csaw.io:8990/"
+}

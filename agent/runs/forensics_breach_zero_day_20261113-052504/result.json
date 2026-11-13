@@ -1,0 +1,10 @@
+{
+  "flag": null,
+  "solved": false,
+  "correct": null,
+  "steps": 37,
+  "tokens": 406224,
+  "seconds": 477.0,
+  "forged_tools": 20,
+  "reason": "budget: tokens dépassés"
+}

@@ -39,13 +39,25 @@ class Ledger:
         return self.data.get(self.key(category, dirname))
 
     def update(self, category: str, dirname: str, result, run_dir: Path) -> None:
-        self.data[self.key(category, dirname)] = {
+        key = self.key(category, dirname)
+        # Garde anti-régression : ne JAMAIS rétrograder un succès déjà enregistré par un
+        # échec (une re-tentative --force d'un challenge résolu ne doit pas effacer le flag).
+        prev = self.data.get(key)
+        new_correct = getattr(result, "correct", None)
+        new_solved = bool(getattr(result, "solved", False))
+        if prev and prev.get("correct") is True and not (new_correct is True):
+            return
+        if prev and prev.get("solved") and prev.get("correct") is not False \
+                and not (new_solved and new_correct is not False):
+            return
+        self.data[key] = {
             "challenge": self.key(category, dirname),
             "solved": bool(getattr(result, "solved", False)),
             "correct": getattr(result, "correct", None),
             "flag": getattr(result, "flag", None),
             "steps": getattr(result, "steps", None),
             "tokens": getattr(result, "tokens", None),
+            "seconds": getattr(result, "seconds", None),
             "forged_tools": getattr(result, "forged_tools", None),
             "reason": getattr(result, "reason", None),
             "run_dir": str(run_dir),
