@@ -1,0 +1,14 @@
+{
+  "name": "Juggler",
+  "category": "web",
+  "description": "**Juggling** - the act of tossing and catching two or more **mass**es where at least one is **assigned** an airborne trajectory at any given time.\n\nService: http://{box}:{port}/",
+  "flag": "csaw{tw0_f0r_0n3_2gc9w2hz}",
+  "files": [
+    "juggler.zip"
+  ],
+  "compose": true,
+  "box": "juggler.chal.csaw.io",
+  "internal_port": 80,
+  "proto": "http",
+  "server_description": "HTTP service at http://juggler.chal.csaw.io:80/"
+}

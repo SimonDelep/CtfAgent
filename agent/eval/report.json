@@ -4,10 +4,10 @@
     "solved": false,
     "correct": null,
     "flag": null,
-    "steps": 31,
-    "tokens": 418776,
-    "seconds": 1154.1,
-    "reason": "budget: tokens dépassés"
+    "steps": 40,
+    "tokens": 316560,
+    "seconds": 1068.6,
+    "reason": "budget: max_steps atteint"
   },
   {
     "challenge": "crypto/polly",
@@ -58,6 +58,12 @@
     "tokens": 408204,
     "seconds": 976.0,
     "reason": "budget: tokens dépassés"
+  },
+  {
+    "challenge": "forensics/hemispheres",
+    "error": "can only concatenate str (not \"bytes\") to str",
+    "solved": false,
+    "correct": false
   },
   {
     "challenge": "forensics/schrodingers_backup",

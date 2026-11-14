@@ -1,0 +1,27 @@
+{
+  "services": {
+    "challenge": {
+      "build": {
+        "context": ".",
+        "dockerfile": "Dockerfile"
+      },
+      "networks": {
+        "ctfnet": {
+          "aliases": [
+            "juggler.chal.csaw.io"
+          ]
+        }
+      },
+      "expose": [
+        "80"
+      ]
+    }
+  },
+  "networks": {
+    "ctfnet": {
+      "external": true,
+      "name": "ctfnet"
+    }
+  },
+  "name": "csaw2026-web-juggler"
+}
